@@ -1,0 +1,25 @@
+.container {
+    text-align: center;
+}
+
+.row {
+    margin: 0;
+}
+
+.btn, .btn:hover, .btn:focus {
+    width: 100%;
+    background-color: #4CAF50;
+}
+
+.input-field input:focus + label {
+    color: #4CAF50 !important;
+}
+
+.input-field input:focus {
+    border-bottom: 1px solid #4CAF50 !important;
+    box-shadow: 0 1px 0 0 #4CAF50 !important;
+}
+
+li > span {
+    color: #4CAF50 !important;
+}

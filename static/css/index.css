@@ -1,0 +1,37 @@
+.container {
+    margin-top: 15px;
+}
+
+.label {
+    display: inline;
+}
+
+.switchLabel {
+    display: inline;
+    color: rgb(53, 53, 53);
+}
+
+.switch {
+    margin-bottom: 25px;
+}
+
+.lever::after {
+    background-color: #4CAF50 !important;
+}
+
+.lever::before {
+    background-color: rgba(76,175,80,.15) !important;
+}
+
+.switch label .lever{
+    background-color: rgba(76,175,80,.38) !important;
+}
+
+.btn, .btn:hover, .btn:focus {
+    width: 100%;
+    background-color: #4CAF50;
+}
+
+.row {
+    margin: 0;
+}

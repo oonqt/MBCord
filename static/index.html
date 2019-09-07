@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>EmbyCord</title>
+
+    <link rel="stylesheet" href="css/materialize.min.css">
+    <link rel="stylesheet" href="css/index.css">
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col s12">
+                <div class="switch">
+                    <h5 class="label">Run At Startup</h5>
+                    <label style="float: right; margin-top: 8px;">
+                        <h6 class="switchLabel">Disabled</h6>
+                        <input type="checkbox" id="autoStart">
+                        <span class="lever"></span>
+                        <h6 class="switchLabel">Enabled</h6>
+                    </label>
+                </div>
+            </div>
+        </div>
+        <!-- <div class="row">
+            <div class="col s12">
+                <div class="switch">
+                    <h5 class="label">Display When Idle</h5>
+                    <label style="float: right; margin-top: 8px;">
+                        <h6 class="switchLabel">Disabled</h6>
+                        <input type="checkbox" id="displayWhenIdle">
+                        <span class="lever"></span>
+                        <h6 class="switchLabel">Enabled</h6>
+                    </label>
+                </div>
+            </div>
+        </div> -->
+        <div class="row">
+            <div class="col s12">
+                <button class="btn waves-effect waves-light" id="resetApp">Clear Settings</button>
+            </div>
+        </div>
+
+        <span id="msg" style="color: red; display: block; margin-top: 5px;"></span>
+    </div>
+
+    <script src="js/materialize.min.js"></script>
+    <script src="js/index.js"></script>
+</body>
+</html>

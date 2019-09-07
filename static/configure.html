@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Configure EmbyCord</title>
+
+    <link rel="stylesheet" href="css/materialize.min.css">
+    <link rel="stylesheet" href="css/configure.css">
+</head>
+<body>
+    <div class="container">
+        <h5 class="title">Let's get you set up</h5>
+
+        <form id="configuration">
+            <div class="row">
+                <div class="input-field col s3">
+                    <select id="protocol">
+                        <option value="http" selected>http://</option>
+                        <option value="https">https://</option>
+                    </select>
+                    <label for="protocol">Protocol</label>
+                </div>
+                <div class="input-field col s6">
+                    <input id="serverAddress" type="text">
+                    <label for="serverAddress">Server Address</label>
+                </div>
+                <div class="input-field col s3">
+                    <input type="text" id="port" value="8096">
+                    <label for="port">Port</label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="input-field col s6">
+                    <input id="username" type="text">
+                    <label for="username">Username</label>
+                </div>
+                <div class="input-field col s6">
+                    <input id="password" type="password">
+                    <label for="password">Password</label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col s12">
+                    <button class="btn waves-effect waves-light" type="submit">Save</button>
+                </div>
+            </div>
+        </form>
+
+        <span id="msg" style="color: red; display: block; margin-top: 5px;"></span>
+    </div>
+
+    <script src="js/materialize.min.js"></script>
+    <script src="js/configure.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var elems = document.querySelectorAll('select');
+            var instances = M.FormSelect.init(elems);
+        });
+    </script>
+</body>
+</html>

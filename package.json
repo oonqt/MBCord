@@ -1,0 +1,20 @@
+{
+  "name": "EmbyCord",
+  "version": "0.1.0",
+  "description": "An Emby rich presence client for Discord",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-packager . EmbyCord --overwrite --asar=true --overwrite --platform=win32 --arch=ia32 --icon=icons/icon.ico --out=build --portable"
+  },
+  "author": "Luke C",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^6.0.2"
+  },
+  "dependencies": {
+    "auto-launch": "^5.0.5",
+    "discord-rpc": "^3.0.2",
+    "request": "^2.88.0"
+  }
+}
