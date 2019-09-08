@@ -1,8 +1,6 @@
-// fuck object oriented programming shit just makes your code confusing as hell. do it the correct way with one file.
-
 const fs = require("fs");
 const path = require("path");
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow, ipcMain, Tray, Menu, dialog } = require("electron");
 const request = require("request");
 const DiscordRPC = require("discord-rpc");
 const { version } = require("./package.json");
@@ -11,50 +9,60 @@ const rpc = new DiscordRPC.Client({ transport: "ipc" });
 
 const clientId = "609837785049726977";
 
-let windowHeight = {
-    configWindow: {
-        width: 450,
-        height: 315
-    },
-    mainWindow: {
-        width: 480,
-        height: 175
-    }
-}
-
 let mainWindow;
+let tray;
 let accessToken;
 let statusUpdate;
 
 function startApp() {
     mainWindow = new BrowserWindow({
-        width: windowHeight.configWindow.width,
-        height: windowHeight.configWindow.height,
+        width: 480,
+        height: 300,
         maximizable: false,
+        minimizable: false,
         webPreferences: {
             nodeIntegration: true
-        },
-        icon: path.join(__dirname, "icons", "icon.ico")
-        // resizable: false,
+        }
     });
 
+    mainWindow.setSkipTaskbar(true);
     mainWindow.setMenu(null);
+    // app.dock.hide(true);
 
     let isConfigured = fs.existsSync(path.join(app.getPath("userData"), "config.json"));
 
     if(!isConfigured) {
         mainWindow.loadFile(path.join(__dirname, "static", "configure.html"));
     } else {
-        mainWindow.loadFile(path.join(__dirname, "static", "index.html"));
-        mainWindow.setSize(windowHeight.mainWindow.width, windowHeight.mainWindow.height);
+        moveToTray();
     }
 
     mainWindow.on('will-resize', e => {
         e.preventDefault();
-    });    
+    });
 }
 
-ipcMain.on("resetApp", () => {
+function moveToTray() {
+    tray = new Tray(path.join(__dirname, "icons", "tray.png"));
+    const contextMenu = Menu.buildFromTemplate([
+        { 
+            type: "separator" 
+        },
+        { 
+            label: "Reset Settings",
+            click: () => resetApp()
+        },
+        { 
+            label: "Quit", 
+            click: () => app.quit()
+        }
+    ]);
+    tray.setToolTip("EmbyCord");
+    tray.setContextMenu(contextMenu);
+    mainWindow.hide();
+}
+
+function resetApp() {
     fs.unlink(path.join(app.getPath("userData"), "config.json"), err => {
         if(err) return mainWindow.webContents.send("error", "Failed to wipe config");
 
@@ -62,24 +70,11 @@ ipcMain.on("resetApp", () => {
 
         clearInterval(statusUpdate);
 
-        mainWindow.setSize(windowHeight.configWindow.width, windowHeight.configWindow.height);
         mainWindow.loadFile(path.join(__dirname, "static", "configure.html"));
+        mainWindow.show();
+        tray.destroy();
     });
-});
-
-// ipcMain.on("displaywhenidle", async (event, display) => {
-//     let configFile = await fs.readFileSync(path.join(app.getPath("userData"), "config.json"), "utf8").catch(console.error);
-
-//     configFile = JSON.parse(configFile);
-
-//     if(display) {
-//         configFile.displayWhenIdle = true;
-//     } else if(!display) {
-//         configFile.displayWhenIdle = false;
-//     }
-
-//     fs.writeFileSync(path.join(app.getPath("userData"), "config.json"), JSON.stringify(configFile)).catch(console.error);
-// });
+};
 
 ipcMain.on("config-save", (event, data) => {
     if(!data.serverAddress || !data.username || !data.password || !data.port) mainWindow.webContents.send("error", "Invalid server address or login credentials");
@@ -103,8 +98,8 @@ ipcMain.on("config-save", (event, data) => {
 
             displayPresence();
 
-            mainWindow.setSize(windowHeight.mainWindow.width, windowHeight.mainWindow.height);
-            mainWindow.loadFile(path.join(__dirname, "static", "index.html"));
+            mainWindow.hide();
+            moveToTray();
         });
     });
 });
@@ -120,12 +115,24 @@ async function setStatus() {
             "Authorization": `Emby Client="Other", Device="Discord RPC", DeviceId="f848hjf4hufhu5fuh55f5f5ffssdasf", Version=${version}, Token=${accessToken}`
         }
     }, (err, res, body) => {
-        if(err) return console.error(err);
-        if(res.statusCode !== 200) return console.error("Failed to authenticate");
+        if(res.statusCode !== 200 || err) return console.error("Failed to authenticate");
 
         body = JSON.parse(body);
 
         let session = body.filter(session => session.UserName === data.username && session.DeviceName !== "Discord RPC" && session.NowPlayingItem)[0];
+
+
+        // rewrite switch/case
+        // switch(session.NowPlayingItem.Type) {
+        //     case "Episode":
+                
+        //         break;
+        //     case "Movie":
+
+        //         break;
+            
+        //     default: 
+        // }
 
         rpc.setActivity({
             details: (session ? (session.NowPlayingItem.Type === "Episode" ? `Watching ${session.NowPlayingItem.SeriesName} - ${session.NowPlayingItem.SeasonName}` : (session.NowPlayingItem.Type === "Movie" ? "Watching a Movie" : "Watching Other")) : "Idle"),
