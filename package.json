@@ -5,12 +5,16 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-packager . EmbyCord --overwrite --asar=true --overwrite --platform=win32 --arch=ia32 --icon=icons/icon.ico --out=build --portable"
+    "build": "electron-packager . EmbyCord --out=build --all --asar --overwrite",
+    "build:mac": "electron-packager . EmbyCord --out=build --overwrite --asar --icon=icons/mac/icon.icns --platform=darwin --arch=x64",
+    "build:win64": "electron-packager . EmbyCord --out=build --overwrite --asar --icon=icons/win/icon.ico --platform=win32 --arch=x64",
+    "build:win32": "electron-packager . EmbyCord --out=build --overwrite --asar --icon=icons/win/icon.ico --platform=win32 --arch=ia32"
   },
   "author": "Luke C",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^6.0.2"
+    "electron": "^6.0.7",
+    "electron-packager": "^14.0.5"
   },
   "dependencies": {
     "discord-rpc": "^3.0.2",

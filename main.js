@@ -1,6 +1,8 @@
+// what is oop?  
+
 const fs = require("fs");
 const path = require("path");
-const { app, BrowserWindow, ipcMain, Tray, Menu, dialog } = require("electron");
+const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage } = require("electron");
 const request = require("request");
 const DiscordRPC = require("discord-rpc");
 const { version } = require("./package.json");
@@ -25,9 +27,7 @@ function startApp() {
         }
     });
 
-    mainWindow.setSkipTaskbar(true);
     mainWindow.setMenu(null);
-    // app.dock.hide(true);
 
     let isConfigured = fs.existsSync(path.join(app.getPath("userData"), "config.json"));
 
@@ -35,6 +35,8 @@ function startApp() {
         mainWindow.loadFile(path.join(__dirname, "static", "configure.html"));
     } else {
         moveToTray();
+        app.dock.hide();
+        mainWindow.setSkipTaskbar(true);
     }
 
     mainWindow.on('will-resize', e => {
@@ -70,8 +72,14 @@ function resetApp() {
 
         clearInterval(statusUpdate);
 
+        rpc.clearActivity();
+
         mainWindow.loadFile(path.join(__dirname, "static", "configure.html"));
         mainWindow.show();
+        mainWindow.setSkipTaskbar(false);
+        
+        app.dock.show();
+        
         tray.destroy();
     });
 };
@@ -99,6 +107,9 @@ ipcMain.on("config-save", (event, data) => {
             displayPresence();
 
             mainWindow.hide();
+            app.dock.hide();
+            mainWindow.setSkipTaskbar(true);
+           
             moveToTray();
         });
     });
@@ -121,8 +132,6 @@ async function setStatus() {
 
         let session = body.filter(session => session.UserName === data.username && session.DeviceName !== "Discord RPC" && session.NowPlayingItem)[0];
 
-
-        // rewrite switch/case
         // switch(session.NowPlayingItem.Type) {
         //     case "Episode":
                 
