@@ -129,29 +129,47 @@ async function setStatus() {
         if(res.statusCode !== 200 || err) return console.error("Failed to authenticate");
 
         body = JSON.parse(body);
-
+        
         let session = body.filter(session => session.UserName === data.username && session.DeviceName !== "Discord RPC" && session.NowPlayingItem)[0];
-
-        // switch(session.NowPlayingItem.Type) {
-        //     case "Episode":
-                
-        //         break;
-        //     case "Movie":
-
-        //         break;
-            
-        //     default: 
-        // }
-
-        rpc.setActivity({
-            details: (session ? (session.NowPlayingItem.Type === "Episode" ? `Watching ${session.NowPlayingItem.SeriesName} - ${session.NowPlayingItem.SeasonName}` : (session.NowPlayingItem.Type === "Movie" ? "Watching a Movie" : "Watching Other")) : "Idle"),
-            state: (session ? session.NowPlayingItem.Name : "Idle"),
-            largeImageKey: "emby-large",
-            largeImageText: (session ? `Watching on ${session.Client}` : `Idle`),
-            smallImageKey: (session ? (session.PlayState.IsPaused ? "emby-pause" : "emby-play") : "emby-small"),
-            smallImageText: (session ? (session.PlayState.IsPaused ? "Paused" : "Playing") : "Idle"),
-            instance: false
-        });
+        
+        if(session) {
+            switch(session.NowPlayingItem.Type) {
+                case "Episode":
+                    rpc.setActivity({
+                        details: `Watching ${session.NowPlayingItem.SeriesName} - ${session.NowPlayingItem.SeasonName}`,
+                        state: session.NowPlayingItem.Name,
+                        largeImageKey: "emby-large",
+                        largeImageText: `Watching on ${session.Client}`,
+                        smallImageKey: session.PlayState.IsPaused ? "emby-pause" : "emby-play",
+                        smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                        instance: false
+                    });
+                    break;
+                case "Movie":
+                        rpc.setActivity({
+                            details: "Watching a movie",
+                            state: session.NowPlayingItem.Name,
+                            largeImageKey: "emby-large",
+                            largeImageText: `Watching on ${session.Client}`,
+                            smallImageKey: session.PlayState.IsPaused ? "emby-pause" : "emby-play",
+                            smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                            instance: false
+                        });
+                    break;
+                default: 
+                    rpc.setActivity({
+                        details: "Watching Other Content",
+                        state: session.NowPlayingItem.Name,
+                        largeImageKey: "emby-large",
+                        largeImageText: `Watching on ${session.Client}`,
+                        smallImageKey: session.PlayState.IsPaused ? "emby-pause" : "emby-play",
+                        smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                        instance: false
+                    });
+            }
+        } else {
+            rpc.clearActivity();
+        }
     });
 }
 
