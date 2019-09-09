@@ -19,7 +19,7 @@ let statusUpdate;
 function startApp() {
     mainWindow = new BrowserWindow({
         width: 480,
-        height: 300,
+        height: 310,
         maximizable: false,
         minimizable: false,
         webPreferences: {
