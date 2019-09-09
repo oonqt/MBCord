@@ -35,7 +35,7 @@ function startApp() {
         mainWindow.loadFile(path.join(__dirname, "static", "configure.html"));
     } else {
         moveToTray();
-        app.dock.hide();
+        if(process.platform === "darwin") app.dock.hide();
         mainWindow.setSkipTaskbar(true);
     }
 
@@ -78,7 +78,7 @@ function resetApp() {
         mainWindow.show();
         mainWindow.setSkipTaskbar(false);
         
-        app.dock.show();
+        if(process.platform === "darwin") app.dock.show();
         
         tray.destroy();
     });
@@ -107,7 +107,7 @@ ipcMain.on("config-save", (event, data) => {
             displayPresence();
 
             mainWindow.hide();
-            app.dock.hide();
+            if(process.platform === "darwin") app.dock.hide();
             mainWindow.setSkipTaskbar(true);
            
             moveToTray();
@@ -126,7 +126,7 @@ async function setStatus() {
             "Authorization": `Emby Client="Other", Device="Discord RPC", DeviceId="f848hjf4hufhu5fuh55f5f5ffssdasf", Version=${version}, Token=${accessToken}`
         }
     }, (err, res, body) => {
-        if(res.statusCode !== 200 || err) return console.error("Failed to authenticate");
+        if(err || res.statusCode !== 200) return console.error("Failed to authenticate");
 
         body = JSON.parse(body);
         
