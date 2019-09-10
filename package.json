@@ -11,7 +11,7 @@
     "build:linux64": "electron-packager . EmbyCord --out=build --overwrite --asar --icon=icons/win/icon.ico --platform=linux --arch=x64",
     "build:linux32": "electron-packager . EmbyCord --out=build --overwrite --asar --icon=icons/win/icon.ico --platform=linux --arch=ia32",
     "build:armv7l": "electron-packager . EmbyCord --out=build --overwrite --asar --icon=icons/win/icon.ico --platform=linux --arch=armv7l",
-    "build:arm64": "electron-packager . EmbyCord --out=build --overwrite --asar --icon=icons/win/icon.ico --platform=linux --arch=am64",
+    "build:arm64": "electron-packager . EmbyCord --out=build --overwrite --asar --icon=icons/win/icon.ico --platform=linux --arch=arm64",
     "build:win32": "electron-packager . EmbyCord --out=build --overwrite --asar --icon=icons/win/icon.ico --platform=win32 --arch=ia32"
   },
   "author": "Luke C",
