@@ -5,7 +5,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "npm run build:mac && npm run build:win64 && npm run build:win32 && npm run build:linux64 && npm run build:linux32",
+    "build": "npm run build:mac && npm run build:win64 && npm run build:win32 && npm run build:linux64 && npm run build:linux32 && npm run build:armv7l && npm run build:arm64",
     "build:mac": "electron-packager . EmbyCord --out=build --overwrite --asar --icon=icons/mac/icon.icns --platform=darwin --arch=x64",
     "build:win64": "electron-packager . EmbyCord --out=build --overwrite --asar --icon=icons/win/icon.ico --platform=win32 --arch=x64",
     "build:linux64": "electron-packager . EmbyCord --out=build --overwrite --asar --icon=icons/win/icon.ico --platform=linux --arch=x64",
