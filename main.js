@@ -2,12 +2,15 @@
 
 const fs = require("fs");
 const path = require("path");
-const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage } = require("electron");
+const { app, BrowserWindow, ipcMain, Tray, Menu } = require("electron");
 const request = require("request");
 const DiscordRPC = require("discord-rpc");
+const Logger = require("./logger");
 const { version } = require("./package.json");
 
 const rpc = new DiscordRPC.Client({ transport: "ipc" });
+
+const logger = new Logger("file", app.getPath("userData"));
 
 const clientId = "609837785049726977";
 
@@ -66,7 +69,11 @@ function moveToTray() {
 
 function resetApp() {
     fs.unlink(path.join(app.getPath("userData"), "config.json"), err => {
-        if(err) return mainWindow.webContents.send("error", "Failed to wipe config");
+        if(err) {
+            mainWindow.webContents.send("error", "Failed to wipe config");
+            logger.log(err);
+            return;
+        }
 
         accessToken = null;
 
@@ -97,12 +104,20 @@ ipcMain.on("config-save", (event, data) => {
         },
         json: true
     }, (err, res, body) => {
-        if(err || res.statusCode !== 200) return mainWindow.webContents.send("error", "Invalid server address or login credentials");
+        if(err || res.statusCode !== 200) {
+            mainWindow.webContents.send("error", "Invalid server address or login credentials");
+            logger.log(err);
+            return;
+        }
 
         accessToken = body.AccessToken
 
         fs.writeFile(path.join(app.getPath("userData"), "config.json"), JSON.stringify(data), err => {
-            if(err) return mainWindow.webContents.send("error", "Failed to save config");
+            if(err){
+                mainWindow.webContents.send("error", "Failed to save config");
+                logger.log(err);
+                return;
+            }
 
             displayPresence();
 
@@ -119,14 +134,14 @@ async function setStatus() {
     let data = await fs.readFileSync(path.join(app.getPath("userData"), "config.json"), "utf8");
     data = JSON.parse(data);
 
-    if(!accessToken) await setToken(data.username, data.password, data.serverAddress, data.port, data.protocol).catch(console.error);
+    if(!accessToken) await setToken(data.username, data.password, data.serverAddress, data.port, data.protocol).catch(err => logger.log(err));
 
     request(`${data.protocol}://${data.serverAddress}:${data.port}/emby/Sessions`, {
         headers: {
             "Authorization": `Emby Client="Other", Device="Discord RPC", DeviceId="f848hjf4hufhu5fuh55f5f5ffssdasf", Version=${version}, Token=${accessToken}`
         }
     }, (err, res, body) => {
-        if(err || res.statusCode !== 200) return console.error("Failed to authenticate");
+        if(err || res.statusCode !== 200) return logger.log(`Failed to authenticate: ${err}`);
 
         body = JSON.parse(body);
         
@@ -195,8 +210,7 @@ function setToken(username, password, serverAddress, port, protocol) {
             },
             json: true
         }, (err, res, body) => {
-            if(err) return reject(err);
-            if(res.statusCode !== 200) return reject("Failed to authenticate");
+            if(err || res.statusCode !== 200) return reject(err);
 
             accessToken = body.AccessToken;
 
@@ -223,4 +237,11 @@ rpc.on("ready", () => {
     }
 });
 
-rpc.login({ clientId }).catch(console.error);
+rpc.login({ clientId }).catch(err => logger.log(`Failed to connect to discord: ${err}`));
+
+process
+    .on("unhandledRejection", (reason, p) => logger.log(`${reason} at ${p}`))
+    .on("uncaughtException", err => {
+        logger.log(`Uncaught Exception: ${err}`);
+        process.exit(1);
+    });
