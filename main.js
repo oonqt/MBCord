@@ -50,6 +50,11 @@ function startApp() {
 function moveToTray() {
     tray = new Tray(path.join(__dirname, "icons", "tray.png"));
     const contextMenu = Menu.buildFromTemplate([
+        {
+            type: "checkbox",
+            label: "Run at Startup",
+            click: () => console.log("hello")
+        },
         { 
             type: "separator" 
         },
