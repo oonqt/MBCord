@@ -3,6 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 const { app, BrowserWindow, ipcMain, Tray, Menu } = require("electron");
+const startup = require("./startupHandler");
 const request = require("request");
 const DiscordRPC = require("discord-rpc");
 const Logger = require("./logger");
@@ -11,6 +12,7 @@ const { version } = require("./package.json");
 const rpc = new DiscordRPC.Client({ transport: "ipc" });
 
 const logger = new Logger("file", app.getPath("userData"));
+const startupHandler = new startup(app);
 
 const clientId = "609837785049726977";
 
@@ -50,6 +52,15 @@ function startApp() {
 function moveToTray() {
     tray = new Tray(path.join(__dirname, "icons", "tray.png"));
     const contextMenu = Menu.buildFromTemplate([ 
+        {
+            type: "checkbox",
+            label: "Run at Startup",
+            checked: startupHandler.isEnabled,
+            click: () => toggleStartup()
+        },
+        {
+            type: "separator"
+        },
         { 
             label: "Reset Settings",
             click: () => resetApp()
@@ -62,6 +73,14 @@ function moveToTray() {
     tray.setToolTip("EmbyCord");
     tray.setContextMenu(contextMenu);
     mainWindow.hide();
+}
+
+function toggleStartup() {
+    if(startupHandler.isEnabled) {
+        startupHandler.disable();
+    } else {
+        startupHandler.enable();
+    }
 }
 
 function resetApp() {
