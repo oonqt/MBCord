@@ -4,23 +4,33 @@ const path = require("path");
 class Logger {
     constructor(logType, logPath) {
         this.logType = logType;
-        this.logPath = logPath;
+        this.path = path.join(logPath, "logs");
         this.timestamp = new Date();
-        this.logFile = path.join(logPath, "logs", `EmbyCord-${this.timestamp.getTime() / 1000 | 0}.txt`);
+        this.file = path.join(this.path, `EmbyCord-${this.timestamp.getTime() / 1000 | 0}.txt`);
+    }
+
+    get logPath() {
+        if(!fs.existsSync(this.path)) fs.mkdirSync(this.path);
+        return this.path;
+    }
+
+    get logFile() {
+        if(!fs.existsSync(this.file)) fs.writeFileSync(this.file, "");
+        return this.file;
     }
 
     log(message) {
         if(this.logType === "console") {
             console.log(message);
         } else if (this.logType === "file") {
-            if(!fs.existsSync(path.join(this.logPath, "logs"))) {
-                fs.mkdirSync(path.join(this.logPath, "logs"));
+            if(!fs.existsSync(path.join(this.path))) {
+                fs.mkdirSync(path.join(this.path));
             }
 
-            if(!fs.existsSync(this.logFile)) {
-                fs.writeFileSync(this.logFile, `[${this.timestamp.toLocaleString()}]: ${message}\n`);
+            if(!fs.existsSync(this.file)) {
+                fs.writeFileSync(this.file, `[${this.timestamp.toLocaleString()}]: ${message}\n`);
             } else {
-                fs.appendFileSync(this.logFile, `[${this.timestamp.toLocaleString()}]: ${message}\n`);
+                fs.appendFileSync(this.file, `[${this.timestamp.toLocaleString()}]: ${message}\n`);
             }
         }
     }

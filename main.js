@@ -2,7 +2,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { app, BrowserWindow, ipcMain, Tray, Menu } = require("electron");
+const { app, BrowserWindow, ipcMain, Tray, Menu, shell } = require("electron");
 const startup = require("./startupHandler");
 const request = require("request");
 const DiscordRPC = require("discord-rpc");
@@ -11,7 +11,7 @@ const { version } = require("./package.json");
 
 const rpc = new DiscordRPC.Client({ transport: "ipc" });
 
-const logger = new Logger("file", app.getPath("userData"));
+const logger = new Logger("console", app.getPath("userData"));
 const startupHandler = new startup(app);
 
 const clientId = "609837785049726977";
@@ -57,6 +57,17 @@ function moveToTray() {
             label: "Run at Startup",
             checked: startupHandler.isEnabled,
             click: () => toggleStartup()
+        },
+        {
+            type: "separator"
+        },
+        {
+            label: "Show Logs",
+            click: () => shell.openItem(logger.logPath)
+        },
+        {
+            label: "Show Current Log",
+            click: () => shell.openItem(logger.logFile)
         },
         {
             type: "separator"
