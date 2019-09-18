@@ -14,11 +14,6 @@ class Logger {
         return this.path;
     }
 
-    get logFile() {
-        if(!fs.existsSync(this.file)) fs.writeFileSync(this.file, "");
-        return this.file;
-    }
-
     log(message) {
         if(this.logType === "console") {
             console.log(message);

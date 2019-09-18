@@ -2,7 +2,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const { app, BrowserWindow, ipcMain, Tray, Menu, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, Tray, Menu, shell, dialog } = require("electron");
 const startup = require("./startupHandler");
 const request = require("request");
 const DiscordRPC = require("discord-rpc");
@@ -31,11 +31,11 @@ function startApp() {
             nodeIntegration: true
         }
     });
-
+    
     mainWindow.setMenu(null);
-
+    
     let isConfigured = fs.existsSync(path.join(app.getPath("userData"), "config.json"));
-
+    
     if(!isConfigured) {
         mainWindow.loadFile(path.join(__dirname, "static", "configure.html"));
     } else {
@@ -66,10 +66,6 @@ function moveToTray() {
             click: () => shell.openItem(logger.logPath)
         },
         {
-            label: "Show Current Log",
-            click: () => shell.openItem(logger.logFile)
-        },
-        {
             type: "separator"
         },
         { 
@@ -78,12 +74,13 @@ function moveToTray() {
         },
         { 
             label: "Quit", 
-            click: () => app.quit()
+            role: "quit"
         }
     ]);
     tray.setToolTip("EmbyCord");
     tray.setContextMenu(contextMenu);
     mainWindow.hide();
+    dialog.showMessageBox({type: "info", title: "EmbyCord", message: "EmbyCord has been minimized to the tray", icon: path.join(__dirname, "icons", "msgbox.png")});
 }
 
 function toggleStartup() {
@@ -98,7 +95,7 @@ function resetApp() {
     fs.unlink(path.join(app.getPath("userData"), "config.json"), err => {
         if(err) {
             mainWindow.webContents.send("error", "Failed to wipe config");
-            logger.log(err);
+            logger.log(`Failed to wipe config ${err ? err : ""}`);
             return;
         }
 
@@ -133,7 +130,7 @@ ipcMain.on("config-save", (event, data) => {
     }, (err, res, body) => {
         if(err || res.statusCode !== 200) {
             mainWindow.webContents.send("error", "Invalid server address or login credentials");
-            logger.log(err);
+            logger.log(`Failed to authenticate ${err ? err : ""}`);
             return;
         }
 
@@ -142,13 +139,12 @@ ipcMain.on("config-save", (event, data) => {
         fs.writeFile(path.join(app.getPath("userData"), "config.json"), JSON.stringify(data), err => {
             if(err){
                 mainWindow.webContents.send("error", "Failed to save config");
-                logger.log(err);
+                logger.log(`Failed to save config ${err ? err : ""}`);
                 return;
             }
 
             displayPresence();
 
-            mainWindow.hide();
             if(process.platform === "darwin") app.dock.hide();
             mainWindow.setSkipTaskbar(true);
            
@@ -168,7 +164,7 @@ async function setStatus() {
             "Authorization": `Emby Client="Other", Device="Discord RPC", DeviceId="f848hjf4hufhu5fuh55f5f5ffssdasf", Version=${version}, Token=${accessToken}`
         }
     }, (err, res, body) => {
-        if(err || res.statusCode !== 200) return logger.log(`Failed to authenticate: ${err}`);
+        if(err || res.statusCode !== 200) return logger.log(`Failed to authenticate ${err ? err : ""}`);
 
         body = JSON.parse(body);
         
@@ -189,7 +185,7 @@ async function setStatus() {
                     break;
                 case "Movie":
                         rpc.setActivity({
-                            details: "Watching a movie",
+                            details: "Watching a Movie",
                             state: session.NowPlayingItem.Name,
                             largeImageKey: "emby-large",
                             largeImageText: `Watching on ${session.Client}`,
@@ -198,6 +194,16 @@ async function setStatus() {
                             instance: false
                         });
                     break;
+                case "Music": 
+                    rpc.setActivity({
+                        details: "Listening to Music",
+                        state: session.NowPlayingItem.Name,
+                        largeImageKey: "emby-large",
+                        largeImageText: `Watching on ${session.Client}`,
+                        smallImageKey: session.PlayState.IsPaused ? "emby-pause" : "emby-play",
+                        smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                        instance: false
+                    });
                 default: 
                     rpc.setActivity({
                         details: "Watching Other Content",
@@ -218,11 +224,7 @@ async function setStatus() {
 function displayPresence() {
     setStatus();
 
-    statusUpdate = setInterval(updateStatus, 15000);
-
-    function updateStatus() {
-        setStatus();
-    }
+    statusUpdate = setInterval(setStatus, 15000);
 }
 
 function setToken(username, password, serverAddress, port, protocol) {
@@ -252,19 +254,13 @@ app.on('window-all-closed', () => {
     app.quit();
 });
 
-app.on('activate', () => {
-    if (mainWindow === null) {
-      createWindow();
-    }
-});
-
 rpc.on("ready", () => {
     if(fs.existsSync(path.join(app.getPath("userData"), "config.json"))) {
         displayPresence();
     }
 });
 
-rpc.login({ clientId }).catch(err => logger.log(`Failed to connect to discord: ${err}`));
+rpc.login({ clientId }).catch(() => logger.log(`Failed to connect to discord.`));
 
 process
     .on("unhandledRejection", (reason, p) => logger.log(`${reason} at ${p}`))
