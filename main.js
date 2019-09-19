@@ -9,7 +9,8 @@ const DiscordRPC = require("discord-rpc");
 const Logger = require("./logger");
 const { version } = require("./package.json");
 
-const rpc = new DiscordRPC.Client({ transport: "ipc" });
+// let rpc = new DiscordRPC.Client({ transport: "ipc" });
+let rpc;
 
 const logger = new Logger("console", app.getPath("userData"));
 const startupHandler = new startup(app);
@@ -33,6 +34,8 @@ function startApp() {
     });
     
     mainWindow.setMenu(null);
+
+    rpcConnect();
     
     let isConfigured = fs.existsSync(path.join(app.getPath("userData"), "config.json"));
     
@@ -40,8 +43,6 @@ function startApp() {
         mainWindow.loadFile(path.join(__dirname, "static", "configure.html"));
     } else {
         moveToTray();
-        if(process.platform === "darwin") app.dock.hide();
-        mainWindow.setSkipTaskbar(true);
     }
 
     mainWindow.on('will-resize', e => {
@@ -59,18 +60,29 @@ function moveToTray() {
             click: () => toggleStartup()
         },
         {
+            label: "Reconnect to Discord",
+            click: () => rpcConnect()
+        },
+        {
             type: "separator"
         },
         {
             label: "Show Logs",
             click: () => shell.openItem(logger.logPath)
         },
-        {
-            type: "separator"
-        },
         { 
             label: "Reset Settings",
             click: () => resetApp()
+        },
+        {
+            type: "separator"
+        },
+        {
+            label: "Restart App",
+            click: () => {
+                app.quit();
+                app.relaunch();
+            }
         },
         { 
             label: "Quit", 
@@ -79,8 +91,25 @@ function moveToTray() {
     ]);
     tray.setToolTip("EmbyCord");
     tray.setContextMenu(contextMenu);
+
+    mainWindow.setSkipTaskbar(true);
     mainWindow.hide();
+    
+    if(process.platform === "darwin") app.dock.hide();
+    
     dialog.showMessageBox({type: "info", title: "EmbyCord", message: "EmbyCord has been minimized to the tray", icon: path.join(__dirname, "icons", "msgbox.png")});
+}
+
+function rpcConnect() {
+    if(fs.existsSync(path.join(app.getPath("userData"), "config.json"))) {
+        rpc = new DiscordRPC.Client({ transport: "ipc" });
+        rpc.login({ clientId })
+            .then(() => displayPresence())
+            .catch(() => {
+                logger.log("Failed to connect to discord");
+                setTimeout(rpcConnect, 15000);
+            });
+    }
 }
 
 function toggleStartup() {
@@ -144,9 +173,6 @@ ipcMain.on("config-save", (event, data) => {
             }
 
             displayPresence();
-
-            if(process.platform === "darwin") app.dock.hide();
-            mainWindow.setSkipTaskbar(true);
            
             moveToTray();
         });
@@ -194,7 +220,7 @@ async function setStatus() {
                             instance: false
                         });
                     break;
-                case "Music": 
+                case "Audio": 
                     rpc.setActivity({
                         details: "Listening to Music",
                         state: session.NowPlayingItem.Name,
@@ -204,6 +230,7 @@ async function setStatus() {
                         smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
                         instance: false
                     });
+                    break;
                 default: 
                     rpc.setActivity({
                         details: "Watching Other Content",
@@ -254,13 +281,14 @@ app.on('window-all-closed', () => {
     app.quit();
 });
 
-rpc.on("ready", () => {
-    if(fs.existsSync(path.join(app.getPath("userData"), "config.json"))) {
-        displayPresence();
-    }
-});
+// rpc.on("ready", () => {
+//     console.log("connected rpc")
+//     if(fs.existsSync(path.join(app.getPath("userData"), "config.json"))) {
+//         displayPresence();
+//     }
+// });
 
-rpc.login({ clientId }).catch(() => logger.log(`Failed to connect to discord.`));
+// rpc.login({ clientId }).catch(() => logger.log(`Failed to connect to discord.`));
 
 process
     .on("unhandledRejection", (reason, p) => logger.log(`${reason} at ${p}`))
