@@ -1,6 +1,6 @@
 {
   "name": "EmbyCord",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "An Emby rich presence client for Discord",
   "main": "main.js",
   "scripts": {
