@@ -3,16 +3,16 @@
 const fs = require("fs");
 const path = require("path");
 const { app, BrowserWindow, ipcMain, Tray, Menu, shell, dialog } = require("electron");
-const startup = require("./startupHandler");
+const startup = require("./utils/startupHandler");
 const request = require("request");
 const DiscordRPC = require("discord-rpc");
-const Logger = require("./logger");
+const Logger = require("./utils/logger");
+const isDev = require("./utils/isDev");
 const { version } = require("./package.json");
 
-// let rpc = new DiscordRPC.Client({ transport: "ipc" });
 let rpc;
 
-const logger = new Logger("console", app.getPath("userData"));
+const logger = new Logger((isDev() ? "file" : "console"), app.getPath("userData"));
 const startupHandler = new startup(app);
 
 const clientId = "609837785049726977";
