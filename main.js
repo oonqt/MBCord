@@ -22,6 +22,10 @@ let tray;
 let accessToken;
 let statusUpdate;
 
+Number.prototype.toZero = function() {
+    return (`0${this}`).slice(-2);
+}
+
 function startApp() {
     mainWindow = new BrowserWindow({
         width: 480,
@@ -106,7 +110,7 @@ function rpcConnect() {
         rpc.login({ clientId })
             .then(() => displayPresence())
             .catch(() => {
-                logger.log("Failed to connect to discord");
+                logger.log("Failed to connect to discord. Attempting to reconnect");
                 setTimeout(rpcConnect, 15000);
             });
     }
@@ -195,13 +199,13 @@ async function setStatus() {
         body = JSON.parse(body);
         
         let session = body.filter(session => session.UserName === data.username && session.DeviceName !== "Discord RPC" && session.NowPlayingItem)[0];
-        
+
         if(session) {
             switch(session.NowPlayingItem.Type) {
                 case "Episode":
                     rpc.setActivity({
-                        details: `Watching ${session.NowPlayingItem.SeriesName} - ${session.NowPlayingItem.SeasonName}`,
-                        state: session.NowPlayingItem.Name,
+                        details: `Watching ${session.NowPlayingItem.SeriesName}`,
+                        state: `S${(session.NowPlayingItem.ParentIndexNumber).toZero()}E${(session.NowPlayingItem.IndexNumber).toZero()}: session.NowPlayingItem.Name`,
                         largeImageKey: "emby-large",
                         largeImageText: `Watching on ${session.Client}`,
                         smallImageKey: session.PlayState.IsPaused ? "emby-pause" : "emby-play",
