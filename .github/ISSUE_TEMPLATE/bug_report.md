@@ -10,13 +10,6 @@ assignees: ''
 **Describe the bug**
 A clear and concise description of what the bug is.
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
-
 **Expected behavior**
 A clear and concise description of what you expected to happen.
 
@@ -24,7 +17,8 @@ A clear and concise description of what you expected to happen.
 If applicable, add screenshots to help explain your problem.
 
 **Error**
-Attach the most recent error log
+Attach the most recent error log. This can be found by right clicking the tray application and clicking "Show Logs".
+If you can't access that, you can visit the default log directories for each platform here:
 - Windows: `C:\Users\YOUR_USERNAME\AppData\Roaming\EmbyCord\logs`
 - Mac: `~/Library/Application Support/EmbyCord/logs`
 - Linux: `~/.config/EmbyCord/logs`
