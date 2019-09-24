@@ -7,12 +7,11 @@ const startup = require("./utils/startupHandler");
 const request = require("request");
 const DiscordRPC = require("discord-rpc");
 const Logger = require("./utils/logger");
-const isDev = require("./utils/isDev");
 const { version } = require("./package.json");
 
 let rpc;
 
-const logger = new Logger((isDev() ? "console" : "file"), app.getPath("userData"));
+const logger = new Logger((process.defaultApp ? "console" : "file"), app.getPath("userData"));
 
 const startupHandler = new startup(app);
 
@@ -38,15 +37,13 @@ function startApp() {
         }
     });
     
-    mainWindow.setMenu(null);
-
-    rpcConnect();
-    
+    mainWindow.setMenu(null);    
     let isConfigured = fs.existsSync(path.join(app.getPath("userData"), "config.json"));
     
     if(!isConfigured) {
         mainWindow.loadFile(path.join(__dirname, "static", "configure.html"));
     } else {
+        rpcConnect();
         moveToTray();
     }
 
@@ -248,7 +245,7 @@ async function setStatus() {
                     });
             }
         } else {
-            rpc.clearActivity();
+            if(rpc) rpc.clearActivity();
         }
     });
 }
@@ -285,15 +282,6 @@ app.on("ready", () => startApp());
 app.on('window-all-closed', () => {
     app.quit();
 });
-
-// rpc.on("ready", () => {
-//     console.log("connected rpc")
-//     if(fs.existsSync(path.join(app.getPath("userData"), "config.json"))) {
-//         displayPresence();
-//     }
-// });
-
-// rpc.login({ clientId }).catch(() => logger.log(`Failed to connect to discord.`));
 
 process
     .on("unhandledRejection", (reason, p) => logger.log(`${reason} at ${p}`))
