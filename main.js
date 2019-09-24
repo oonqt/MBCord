@@ -12,7 +12,8 @@ const { version } = require("./package.json");
 
 let rpc;
 
-const logger = new Logger((isDev() ? "file" : "console"), app.getPath("userData"));
+const logger = new Logger((isDev() ? "console" : "file"), app.getPath("userData"));
+
 const startupHandler = new startup(app);
 
 const clientId = "609837785049726977";
@@ -205,7 +206,7 @@ async function setStatus() {
                 case "Episode":
                     rpc.setActivity({
                         details: `Watching ${session.NowPlayingItem.SeriesName}`,
-                        state: `S${(session.NowPlayingItem.ParentIndexNumber).toZero()}E${(session.NowPlayingItem.IndexNumber).toZero()}: session.NowPlayingItem.Name`,
+                        state: `S${(session.NowPlayingItem.ParentIndexNumber).toZero()}E${(session.NowPlayingItem.IndexNumber).toZero()}: ${session.NowPlayingItem.Name}`,
                         largeImageKey: "emby-large",
                         largeImageText: `Watching on ${session.Client}`,
                         smallImageKey: session.PlayState.IsPaused ? "emby-pause" : "emby-play",
