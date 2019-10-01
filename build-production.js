@@ -6,19 +6,18 @@ const fs = require("fs");
 async function main() {
     console.log("Packaging all platforms...");
 
-    await execSync("npm run buildall", { stdio: "ignore" });
+    await execSync("npm run packall", { stdio: "ignore" });
 
     console.log("Compressing...");
 
     let packedBuilds = await fs.readdirSync(path.join(__dirname, "build"));
 
-    await packedBuilds.forEach(async build => {
+    await packedBuilds.forEach(build => {
         console.log(`Starting: ${build}`)
-        await zip.add(path.join("build", `${build}.zip`), path.join("build", build), { deleteFilesAfter: true });
-        console.log(`Finished: ${build}`);
+        zip.add(path.join("build", `${build}.zip`), path.join("build", build), { deleteFilesAfter: true });
     });
 
-    console.log("Finished packaging & compressing")
+    console.log("Finished packaging & compressing");
 }
 
 main();
