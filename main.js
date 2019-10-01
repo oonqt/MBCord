@@ -198,6 +198,8 @@ async function setStatus() {
         
         let session = body.filter(session => session.UserName === data.username && session.DeviceName !== "Discord RPC" && session.NowPlayingItem)[0];
 
+        console.log(session);
+
         if(session) {
             switch(session.NowPlayingItem.Type) {
                 case "Episode":
@@ -224,8 +226,8 @@ async function setStatus() {
                     break;
                 case "Audio": 
                     rpc.setActivity({
-                        details: "Listening to Music",
-                        state: session.NowPlayingItem.Name,
+                        details: `Listening to ${session.NowPlayingItem.Name}`,
+                        state: `By ${session.NowPlayingItem.AlbumArtist}`,
                         largeImageKey: "emby-large",
                         largeImageText: `Watching on ${session.Client}`,
                         smallImageKey: session.PlayState.IsPaused ? "emby-pause" : "emby-play",
