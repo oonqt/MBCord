@@ -3,7 +3,7 @@
 const fs = require("fs");
 const path = require("path");
 const { app, BrowserWindow, ipcMain, Tray, Menu, shell, dialog } = require("electron");
-const startup = require("./utils/startupHandler");
+const Startup = require("./utils/startupHandler");
 const request = require("request");
 const DiscordRPC = require("discord-rpc");
 const Logger = require("./utils/logger");
@@ -13,7 +13,7 @@ let rpc;
 
 const logger = new Logger((process.defaultApp ? "console" : "file"), app.getPath("userData"));
 
-const startupHandler = new startup(app);
+const startupHandler = new Startup(app);
 
 const clientId = "609837785049726977";
 
@@ -112,7 +112,14 @@ function rpcConnect() {
                 setTimeout(rpcConnect, 15000);
             });
     }
+
+    rpc.transport.once("close", () => {
+        clearInterval(statusUpdate);
+        rpcConnect();
+        logger.log("Disconnected from discord. Attemping to reconnect");
+    });
 }
+
 
 function toggleStartup() {
     if(startupHandler.isEnabled) {
@@ -197,8 +204,6 @@ async function setStatus() {
         body = JSON.parse(body);
         
         let session = body.filter(session => session.UserName === data.username && session.DeviceName !== "Discord RPC" && session.NowPlayingItem)[0];
-
-        console.log(session);
 
         if(session) {
             switch(session.NowPlayingItem.Type) {
