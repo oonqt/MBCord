@@ -12,12 +12,10 @@ async function main() {
 
     let packedBuilds = await fs.readdirSync(path.join(__dirname, "build"));
 
-    await packedBuilds.forEach(build => {
+    packedBuilds.forEach(build => {
         console.log(`Starting: ${build}`)
         zip.add(path.join("build", `${build}.zip`), path.join("build", build), { deleteFilesAfter: true });
     });
-
-    console.log("Finished packaging & compressing");
 }
 
 main();
