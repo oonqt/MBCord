@@ -62,10 +62,6 @@ async function moveToTray() {
             click: () => toggleStartup()
         },
         {
-            label: "Reconnect to Discord",
-            click: () => rpcConnect()
-        },
-        {
             type: "separator"
         },
         {
@@ -219,15 +215,15 @@ async function setStatus() {
                     });
                     break;
                 case "Movie":
-                        rpc.setActivity({
-                            details: "Watching a Movie",
-                            state: session.NowPlayingItem.Name,
-                            largeImageKey: "emby-large",
-                            largeImageText: `Watching on ${session.Client}`,
-                            smallImageKey: session.PlayState.IsPaused ? "emby-pause" : "emby-play",
-                            smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-                            instance: false
-                        });
+                    rpc.setActivity({
+                        details: "Watching a Movie",
+                        state: session.NowPlayingItem.Name,
+                        largeImageKey: "emby-large",
+                        largeImageText: `Watching on ${session.Client}`,
+                        smallImageKey: session.PlayState.IsPaused ? "emby-pause" : "emby-play",
+                        smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                        instance: false
+                    });
                     break;
                 case "Audio": 
                     rpc.setActivity({
