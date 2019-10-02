@@ -52,7 +52,7 @@ function startApp() {
     });
 }
 
-function moveToTray() {
+async function moveToTray() {
     tray = new Tray(path.join(__dirname, "icons", "tray.png"));
     const contextMenu = Menu.buildFromTemplate([ 
         {
@@ -97,9 +97,9 @@ function moveToTray() {
     mainWindow.setSkipTaskbar(true);
     mainWindow.hide();
     
-    if(process.platform === "darwin") app.dock.hide();
-    
     dialog.showMessageBox({type: "info", title: "EmbyCord", message: "EmbyCord has been minimized to the tray", icon: path.join(__dirname, "icons", "msgbox.png")});
+    
+    if(process.platform === "darwin") app.dock.hide();
 }
 
 function rpcConnect() {
@@ -234,7 +234,7 @@ async function setStatus() {
                         details: `Listening to ${session.NowPlayingItem.Name}`,
                         state: `By ${session.NowPlayingItem.AlbumArtist}`,
                         largeImageKey: "emby-large",
-                        largeImageText: `Watching on ${session.Client}`,
+                        largeImageText: `Listening on ${session.Client}`,
                         smallImageKey: session.PlayState.IsPaused ? "emby-pause" : "emby-play",
                         smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
                         instance: false
