@@ -1,7 +1,7 @@
 {
-  "name": "EmbyCord",
-  "version": "1.0.6",
-  "description": "An Emby rich presence client for Discord",
+  "name": "JembyCord",
+  "version": "1.0.7",
+  "description": "An Emby/Jellyfin rich presence client for Discord",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -23,6 +23,7 @@
     "node-7z": "^1.1.1"
   },
   "dependencies": {
+    "config": "^3.2.4",
     "discord-rpc": "^3.0.2",
     "request": "^2.88.0"
   }
