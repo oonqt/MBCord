@@ -48,7 +48,9 @@
             </div>
         </form>
 
-        <span id="msg" style="color: red; display: block; margin-top: 5px;"></span>
+        <span id="serverType">Switch to Jellyfin?</span>
+
+        <span id="msg"></span>
     </div>
 
     <script src="js/materialize.min.js"></script>
@@ -57,7 +59,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             var elems = document.querySelectorAll('select');
-            var instances = M.FormSelect.init(elems);
+            M.FormSelect.init(elems);
         });
     </script>
 </body>

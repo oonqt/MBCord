@@ -1,5 +1,5 @@
 {
-  "name": "JembyCord",
+  "name": "EmbyCord",
   "version": "1.0.7",
   "description": "An Emby/Jellyfin rich presence client for Discord",
   "main": "main.js",

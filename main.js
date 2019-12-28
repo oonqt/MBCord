@@ -26,31 +26,57 @@ function toZero(number) {
     return (`0${number}`).slice(-2);
 }
 
-// function startApp() {
-//     mainWindow = new BrowserWindow({
-//         width: 480,
-//         height: 310,
-//         maximizable: false,
-//         minimizable: false,
-//         webPreferences: {
-//             nodeIntegration: true
-//         }
-//     });
-    
-//     mainWindow.setMenu(null);    
-//     let isConfigured = fs.existsSync(path.join(app.getPath("userData"), "config.json"));
-    
+function startApp() {
+    mainWindow = new BrowserWindow({
+        width: 480,
+        height: 300,
+        minimizable: false,
+        maximizable: false,
+        webPreferences: {
+            nodeIntegration: true
+        },
+        resizable: false
+    });
+
+    // check env to allow dev tools and resizing.......
+    if(process.defaultApp) {
+        mainWindow.setResizable(true);
+        mainWindow.webContents.openDevTools();
+    } else {
+        mainWindow.setMenu(null);
+    }
+
+    const isConfigured = fs.existsSync(path.join(app.getPath("userData"), "config.json"));
+
+    if(isConfigured) {
+        // FUCKSTER
+    } else {
+        mainWindow.loadFile(path.join(__dirname, "static", "configure.html"));
+    }
+}
+
+function toggleStartup() {
+    if(startupHandler.isEnabled) {
+        startupHandler.disable();
+    } else {
+        startupHandler.enable();
+    }
+}
+
+ipcMain.on("theme-change", (_, data) => {
+    if(data === "jellyfin") {
+
+    } else if (data === "emby") {
+        
+    }
+});
+
 //     if(!isConfigured) {
 //         mainWindow.loadFile(path.join(__dirname, "static", "configure.html"));
 //     } else {
 //         rpcConnect();
 //         moveToTray();
 //     }
-
-//     mainWindow.on('will-resize', e => {
-//         e.preventDefault();
-//     });
-// }
 
 // async function moveToTray() {
 //     tray = new Tray(path.join(__dirname, "icons", "tray.png"));
@@ -114,15 +140,6 @@ function toZero(number) {
 //         rpcConnect();
 //         logger.log("Disconnected from discord. Attemping to reconnect");
 //     });
-// }
-
-
-// function toggleStartup() {
-//     if(startupHandler.isEnabled) {
-//         startupHandler.disable();
-//     } else {
-//         startupHandler.enable();
-//     }
 // }
 
 // function resetApp() {
@@ -280,11 +297,11 @@ function toZero(number) {
 //     });
 // }
 
-// app.on("ready", () => startApp());
+app.on("ready", () => startApp());
 
-// app.on('window-all-closed', () => {
-//     app.quit();
-// });
+app.on('window-all-closed', () => {
+    app.quit();
+});
 
-// process
-//     .on("unhandledRejection", (reason, p) => logger.log(`${reason} at ${p}`))
+process
+    .on("unhandledRejection", (reason, p) => logger.log(`${reason} at ${p}`))
