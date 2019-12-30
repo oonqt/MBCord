@@ -65,7 +65,7 @@ function toggleStartup() {
 
 ipcMain.on("theme-change", (_, data) => {
     if(data === "jellyfin") {
-
+        mainWindow.
     } else if (data === "emby") {
         
     }
