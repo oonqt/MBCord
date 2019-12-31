@@ -7,7 +7,7 @@ const JsonDB = require("./utils/JsonDB");
 const request = require("request");
 const DiscordRPC = require("discord-rpc");
 const Logger = require("./utils/logger");
-const { toZero } = require("./utils/utils");
+const { toZero, createDeviceId } = require("./utils/utils");
 const { version, name } = require("./package.json");
 
 const logger = new Logger((process.defaultApp ? "console" : "file"), app.getPath("userData"));
@@ -37,16 +37,13 @@ async function startApp() {
         mainWindow.setResizable(true);
         mainWindow.setMaximizable(true);
         mainWindow.setMinimizable(true);
-
-        mainWindow.webContents.openDevTools();
-
-        require("electron-watch")(__dirname, "start", __dirname, 1250);
     } else {
         mainWindow.setMenu(null);
     }
 
     if(db.data().isConfigured === true) {
         moveToTray();
+        connectRPC();
     } else {
         if(!db.data().serverType) db.write({ serverType: "emby" });
         await mainWindow.loadFile(path.join(__dirname, "static", "configure.html"));
@@ -136,7 +133,11 @@ function resetApp() {
 }
 
 ipcMain.on("config-save", async (_, data) => {
-    if(!data.serverAddress || !data.username || !data.password || !data.port) mainWindow.webContents.send("error", "All fields must be filled");
+    const emptyFields = Object.entries(data)
+        .filter(field => !field[1])
+        .map(field => field[0]);
+
+    if(emptyFields.length > 0) return mainWindow.webContents.send("validation-error", emptyFields);
 
     try {
         const token = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version);
@@ -148,7 +149,7 @@ ipcMain.on("config-save", async (_, data) => {
         moveToTray();
     } catch (error) {
         logger.log(error);
-        mainWindow.webContents.send("Invalid server address or login credentials");
+        dialog.showErrorBox(name, "Invalid server address or login credentials");
     }
 });
 
@@ -156,12 +157,7 @@ function getToken(username, password, serverAddress, port, protocol, deviceVersi
     return new Promise((resolve, reject) => {
         request.post(`${protocol}://${serverAddress}:${port}/emby/Users/AuthenticateByName`, {
                 headers: {
-                    Authorization: `
-                        Emby Client="Other", 
-                        Device=${name}, 
-                        DeviceId=${crypto.createHash("md5").update(deviceVersion).digest("hex")},
-                        Version=${version}
-                    `
+                    Authorization: `Emby Client="Other", Device="${name}", DeviceId="${createDeviceId(deviceVersion)}", Version="${version}"`
                 },
                 body: {
                     "Username": username,
@@ -169,8 +165,8 @@ function getToken(username, password, serverAddress, port, protocol, deviceVersi
                 },
                 json: true
             }, (err, res, body) => {
-                if(err) reject(err);
-                if(res.statusCode !== 200) reject(`Failed to authenticate. Status: ${res.statusCode}`);
+                if(err) return reject(err);
+                if(res.statusCode !== 200) return reject(`Failed to authenticate. Status: ${res.statusCode}`);
 
                 resolve(body.accessToken);
             });
@@ -206,12 +202,7 @@ async function setPresence() {
         .catch(err => logger.log(err));
 
         request(`${data.protocol}://${data.serverAddress}:${data.port}/emby/Sessions`, {
-            Authorization: `
-                Emby Client="Other", 
-                Device=${name}, 
-                DeviceId=${crypto.createHash("md5").update(deviceVersion).digest("hex")},
-                Version=${version}
-            `,
+            Authorization: `Emby Client="Other", Device="${name}", DeviceId="${createDeviceId(version)}", Version="${version}", Token="${accessToken}"`,
             json: true
         }, (err, res, body) => {
             if(err) return logger.log(`Failed to authenticate: ${err}`);
