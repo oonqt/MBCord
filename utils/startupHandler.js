@@ -18,6 +18,14 @@ class startupHandler {
             openAtLogin: false
         });
     }
+
+    toggle() {
+        if(this.isEnabled) {
+            this.disable();
+        } else {
+            this.enable();
+        }
+    }
 }
 
 module.exports = startupHandler;
