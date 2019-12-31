@@ -7,14 +7,12 @@ const JsonDB = require("./utils/JsonDB");
 const request = require("request");
 const DiscordRPC = require("discord-rpc");
 const Logger = require("./utils/logger");
+const { toZero } = require("./utils/utils");
 const { version, name } = require("./package.json");
 
 const logger = new Logger((process.defaultApp ? "console" : "file"), app.getPath("userData"));
 const db = new JsonDB(path.join(app.getPath("userData"), "config.json"));
 const startupHandler = new Startup(app);
-
-const jClientId = config.get("jellyfinClientId");
-const eClientId = config.get("embyClientId");
 
 let rpc;
 let mainWindow;
@@ -54,8 +52,6 @@ async function startApp() {
         await mainWindow.loadFile(path.join(__dirname, "static", "configure.html"));
         mainWindow.webContents.send("config-type", db.data().serverType);
     }
-
-    mainWindow.webContents.ononbeforeunload = e => console.log("fdsafasdfdsafdsa")
 }
 
 ipcMain.on("theme-change", (_, data) => {
@@ -160,7 +156,7 @@ function getToken(username, password, serverAddress, port, protocol, deviceVersi
     return new Promise((resolve, reject) => {
         request.post(`${protocol}://${serverAddress}:${port}/emby/Users/AuthenticateByName`, {
                 headers: {
-                    "Authorization": `
+                    Authorization: `
                         Emby Client="Other", 
                         Device=${name}, 
                         DeviceId=${crypto.createHash("md5").update(deviceVersion).digest("hex")},
@@ -181,98 +177,102 @@ function getToken(username, password, serverAddress, port, protocol, deviceVersi
     })
 }
 
-// function rpcConnect() {
-//     if(fs.existsSync(path.join(app.getPath("userData"), "config.json"))) {
-//         rpc = new DiscordRPC.Client({ transport: "ipc" });
-//         rpc.login({ clientId })
-//             .then(() => displayPresence())
-//             .catch(() => {
-//                 logger.log("Failed to connect to discord. Attempting to reconnect");
-//                 setTimeout(rpcConnect, 15000);
-//             });
-//     }
+function connectRPC() {
+    if(db.data().isConfigured) {
+        rpc = new DiscordRPC.Client({ transport: "ipc" });
+        rpc.login({ clientId: config.get("clientIds")[db.data().serverType] })
+            .then(() => {
+                setPresence();
 
-//     rpc.transport.once("close", () => {
-//         clearInterval(statusUpdate);
-//         rpcConnect();
-//         logger.log("Disconnected from discord. Attemping to reconnect");
-//     });
-// }
+                statusUpdate = setInterval(setPresence, 15000);
+            })
+            .catch(() => {
+                logger.log("Failed to connect to discord. Attempting to reconnect");
+                setTimeout(connectRPC, 15000);
+            });
+    } 
 
-// async function setStatus() {
-//     let data = await fs.readFileSync(path.join(app.getPath("userData"), "config.json"), "utf8");
-//     data = JSON.parse(data);
+    rpc.transport.once("close", () => {
+        clearInterval(statusUpdate);
+        connectRPC();
+        logger.log("Discord RPC connection terminated");
+    });
+}
 
-//     if(!accessToken) await setToken(data.username, data.password, data.serverAddress, data.port, data.protocol).catch(err => logger.log(err));
+async function setPresence() {
+    const data = await db.data();
 
-//     request(`${data.protocol}://${data.serverAddress}:${data.port}/emby/Sessions`, {
-//         headers: {
-//             "Authorization": `Emby Client="Other", Device="Discord RPC", DeviceId="f848hjf4hufhu5fuh55f5f5ffssdasf", Version=${version}, Token=${accessToken}`
-//         }
-//     }, (err, res, body) => {
-//         if(err || res.statusCode !== 200) return logger.log(`Failed to authenticate ${err ? err : ""}`);
+    if(!accessToken) accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version)
+        .catch(err => logger.log(err));
 
-//         body = JSON.parse(body);
-        
-//         let session = body.filter(session => session.UserName === data.username && session.DeviceName !== "Discord RPC" && session.NowPlayingItem)[0];
+        request(`${data.protocol}://${data.serverAddress}:${data.port}/emby/Sessions`, {
+            Authorization: `
+                Emby Client="Other", 
+                Device=${name}, 
+                DeviceId=${crypto.createHash("md5").update(deviceVersion).digest("hex")},
+                Version=${version}
+            `,
+            json: true
+        }, (err, res, body) => {
+            if(err) return logger.log(`Failed to authenticate: ${err}`);
+            if(res.statusCode !== 200) return logger.log(`Failed to authenticated: ${res.statusCode}`);
 
-//         if(session) {
-//             switch(session.NowPlayingItem.Type) {
-//                 case "Episode":
-//                     rpc.setActivity({
-//                         details: `Watching ${session.NowPlayingItem.SeriesName}`,
-//                         state: `S${(session.NowPlayingItem.ParentIndexNumber).toZero()}E${(session.NowPlayingItem.IndexNumber).toZero()}: ${session.NowPlayingItem.Name}`,
-//                         largeImageKey: "emby-large",
-//                         largeImageText: `Watching on ${session.Client}`,
-//                         smallImageKey: session.PlayState.IsPaused ? "emby-pause" : "emby-play",
-//                         smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-//                         instance: false
-//                     });
-//                     break;
-//                 case "Movie":
-//                     rpc.setActivity({
-//                         details: "Watching a Movie",
-//                         state: session.NowPlayingItem.Name,
-//                         largeImageKey: "emby-large",
-//                         largeImageText: `Watching on ${session.Client}`,
-//                         smallImageKey: session.PlayState.IsPaused ? "emby-pause" : "emby-play",
-//                         smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-//                         instance: false
-//                     });
-//                     break;
-//                 case "Audio": 
-//                     rpc.setActivity({
-//                         details: `Listening to ${session.NowPlayingItem.Name}`,
-//                         state: `By ${session.NowPlayingItem.AlbumArtist}`,
-//                         largeImageKey: "emby-large",
-//                         largeImageText: `Listening on ${session.Client}`,
-//                         smallImageKey: session.PlayState.IsPaused ? "emby-pause" : "emby-play",
-//                         smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-//                         instance: false
-//                     });
-//                     break;
-//                 default: 
-//                     rpc.setActivity({
-//                         details: "Watching Other Content",
-//                         state: session.NowPlayingItem.Name,
-//                         largeImageKey: "emby-large",
-//                         largeImageText: `Watching on ${session.Client}`,
-//                         smallImageKey: session.PlayState.IsPaused ? "emby-pause" : "emby-play",
-//                         smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-//                         instance: false
-//                     });
-//             }
-//         } else {
-//             if(rpc) rpc.clearActivity();
-//         }
-//     });
-// }
+            const session = body.filter(session => 
+                session.UserName === data.username && 
+                session.DeviceName !== name &&
+                session.NowPlayingItem)[0];
 
-// function displayPresence() {
-//     setStatus();
-
-//     statusUpdate = setInterval(setStatus, 15000);
-// }
+            if(session) {
+                switch(session.NowPlayingItem.Type) {
+                    case "Episode":
+                        rpc.setActivity({
+                            details: `Watching ${session.NowPlayingItem.SeriesName}`,
+                            state: `S${toZero(session.NowPlayingItem.ParentIndexNumber)}E${toZero(session.NowPlayingItem.IndexNumber)}: ${session.NowPlayingItem.Name}`,
+                            largeImageKey: "large",
+                            largeImageText: `Watching on ${session.Client}`,
+                            smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
+                            smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                            instance: false
+                        });
+                        break;
+                    case "Movie":
+                        rpc.setActivity({
+                            details: "Watching a Movie",
+                            state: session.NowPlayingItem.Name,
+                            largeImageKey: "large",
+                            largeImageText: `Watching on ${session.Client}`,
+                            smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
+                            smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                            instance: false
+                        });
+                        break;
+                    case "Audio": 
+                        rpc.setActivity({
+                            details: `Listening to ${session.NowPlayingItem.Name}`,
+                            state: `By ${session.NowPlayingItem.AlbumArtist}`,
+                            largeImageKey: "large",
+                            largeImageText: `Listening on ${session.Client}`,
+                            smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
+                            smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                            instance: false
+                        });
+                        break;
+                    default: 
+                        rpc.setActivity({
+                            details: "Watching Other Content",
+                            state: session.NowPlayingItem.Name,
+                            largeImageKey: "large",
+                            largeImageText: `Watching on ${session.Client}`,
+                            smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
+                            smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                            instance: false
+                        });
+                }   
+            } else {
+                if(rpc) rpc.clearActivity();
+            }
+        });
+}
 
 app.on("ready", () => startApp());
 
