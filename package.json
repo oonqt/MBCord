@@ -20,7 +20,6 @@
   "devDependencies": {
     "electron": "^6.0.7",
     "electron-packager": "^14.0.5",
-    "electron-watch": "^1.0.9",
     "node-7z": "^1.1.1"
   },
   "dependencies": {
