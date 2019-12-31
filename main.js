@@ -1,32 +1,28 @@
-const fs = require("fs");
 const path = require("path");
 const config = require("config");
+const crypto = require("crypto");
 const { app, BrowserWindow, ipcMain, Tray, Menu, shell, dialog } = require("electron");
 const Startup = require("./utils/startupHandler");
+const JsonDB = require("./utils/JsonDB");
 const request = require("request");
 const DiscordRPC = require("discord-rpc");
 const Logger = require("./utils/logger");
-const { version } = require("./package.json");
-
-let rpc;
+const { version, name } = require("./package.json");
 
 const logger = new Logger((process.defaultApp ? "console" : "file"), app.getPath("userData"));
-
+const db = new JsonDB(path.join(app.getPath("userData"), "config.json"));
 const startupHandler = new Startup(app);
 
 const jClientId = config.get("jellyfinClientId");
 const eClientId = config.get("embyClientId");
 
+let rpc;
 let mainWindow;
 let tray;
 let accessToken;
 let statusUpdate;
 
-function toZero(number) {
-    return (`0${number}`).slice(-2);
-}
-
-function startApp() {
+async function startApp() {
     mainWindow = new BrowserWindow({
         width: 480,
         height: 300,
@@ -41,88 +37,149 @@ function startApp() {
     // check env to allow dev tools and resizing.......
     if(process.defaultApp) {
         mainWindow.setResizable(true);
+        mainWindow.setMaximizable(true);
+        mainWindow.setMinimizable(true);
+
         mainWindow.webContents.openDevTools();
+
+        require("electron-watch")(__dirname, "start", __dirname, 1250);
     } else {
         mainWindow.setMenu(null);
     }
 
-    const isConfigured = fs.existsSync(path.join(app.getPath("userData"), "config.json"));
-
-    if(isConfigured) {
-        // FUCKSTER
+    if(db.data().isConfigured === true) {
+        moveToTray();
     } else {
-        mainWindow.loadFile(path.join(__dirname, "static", "configure.html"));
+        if(!db.data().serverType) db.write({ serverType: "emby" });
+        await mainWindow.loadFile(path.join(__dirname, "static", "configure.html"));
+        mainWindow.webContents.send("config-type", db.data().serverType);
     }
-}
 
-function toggleStartup() {
-    if(startupHandler.isEnabled) {
-        startupHandler.disable();
-    } else {
-        startupHandler.enable();
-    }
+    mainWindow.webContents.ononbeforeunload = e => console.log("fdsafasdfdsafdsa")
 }
 
 ipcMain.on("theme-change", (_, data) => {
-    if(data === "jellyfin") {
-        mainWindow.
-    } else if (data === "emby") {
-        
+    switch(data) {
+        case "jellyfin":
+            db.write({ serverType: "jellyfin" });
+            break;
+        case "emby":
+            db.write({ serverType: "emby" });
+            break;
     }
 });
 
-//     if(!isConfigured) {
-//         mainWindow.loadFile(path.join(__dirname, "static", "configure.html"));
-//     } else {
-//         rpcConnect();
-//         moveToTray();
-//     }
+async function moveToTray() {
+    tray = new Tray(path.join(__dirname, "icons", "tray.png"));
 
-// async function moveToTray() {
-//     tray = new Tray(path.join(__dirname, "icons", "tray.png"));
-//     const contextMenu = Menu.buildFromTemplate([ 
-//         {
-//             type: "checkbox",
-//             label: "Run at Startup",
-//             checked: startupHandler.isEnabled,
-//             click: () => toggleStartup()
-//         },
-//         {
-//             type: "separator"
-//         },
-//         {
-//             label: "Show Logs",
-//             click: () => shell.openItem(logger.logPath)
-//         },
-//         { 
-//             label: "Reset Settings",
-//             click: () => resetApp()
-//         },
-//         {
-//             type: "separator"
-//         },
-//         {
-//             label: "Restart App",
-//             click: () => {
-//                 app.quit();
-//                 app.relaunch();
-//             }
-//         },
-//         { 
-//             label: "Quit", 
-//             role: "quit"
-//         }
-//     ]);
-//     tray.setToolTip("EmbyCord");
-//     tray.setContextMenu(contextMenu);
+    const contextMenu = Menu.buildFromTemplate([
+        {
+            type: "checkbox",
+            label: "Run at Startup",
+            click: () => startupHandler.toggle()
+        },
+        {
+            type: "separator"
+        },
+        {
+            label: "Show Logs",
+            click: () => shell.openItem(logger.logPath)
+        },
+        {
+            label: "Reset App",
+            click: () => resetApp()
+        },
+        {
+            type: "separator"
+        },
+        {
+            label: "Restart App",
+            click: () => {
+                app.quit();
+                app.relaunch();
+            }
+        },
+        {
+            label: "Quit",
+            role: "quit"
+        }
+    ]);
 
-//     mainWindow.setSkipTaskbar(true);
-//     mainWindow.hide();
-    
-//     dialog.showMessageBox({type: "info", title: "EmbyCord", message: "EmbyCord has been minimized to the tray", icon: path.join(__dirname, "icons", "msgbox.png")});
-    
-//     if(process.platform === "darwin") app.dock.hide();
-// }
+    tray.setToolTip(name);
+    tray.setContextMenu(contextMenu);
+
+    mainWindow.setSkipTaskbar(true); // hide for windows specifically
+    mainWindow.hide();
+
+    dialog.showMessageBox({ 
+        type: "info", 
+        title: name, 
+        message: `${name} has been minimized to the tray`, 
+        icon: path.join(__dirname, "icons", "msgbox.png") 
+    });
+
+    if(process.platform === "darwin") app.dock.hide(); // hide from dock on macos
+}
+
+function resetApp() {
+    db.write({ isConfigured: false });
+
+    accessToken = null;
+
+    clearInterval(statusUpdate);
+
+    rpc.clearActivity();
+
+    mainWindow.loadFile(path.join(__dirname, "static", "configure.html"));
+    mainWindow.show();
+    mainWindow.setSkipTaskbar(false);
+
+    if(process.platform === "darwin") app.dock.show();
+
+    tray.destroy();
+}
+
+ipcMain.on("config-save", async (_, data) => {
+    if(!data.serverAddress || !data.username || !data.password || !data.port) mainWindow.webContents.send("error", "All fields must be filled");
+
+    try {
+        const token = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version);
+
+        accessToken = token;
+
+        db.write(data);
+
+        moveToTray();
+    } catch (error) {
+        logger.log(error);
+        mainWindow.webContents.send("Invalid server address or login credentials");
+    }
+});
+
+function getToken(username, password, serverAddress, port, protocol, deviceVersion) {
+    return new Promise((resolve, reject) => {
+        request.post(`${protocol}://${serverAddress}:${port}/emby/Users/AuthenticateByName`, {
+                headers: {
+                    "Authorization": `
+                        Emby Client="Other", 
+                        Device=${name}, 
+                        DeviceId=${crypto.createHash("md5").update(deviceVersion).digest("hex")},
+                        Version=${version}
+                    `
+                },
+                body: {
+                    "Username": username,
+                    "Pw": password
+                },
+                json: true
+            }, (err, res, body) => {
+                if(err) reject(err);
+                if(res.statusCode !== 200) reject(`Failed to authenticate. Status: ${res.statusCode}`);
+
+                resolve(body.accessToken);
+            });
+    })
+}
 
 // function rpcConnect() {
 //     if(fs.existsSync(path.join(app.getPath("userData"), "config.json"))) {
@@ -141,65 +198,6 @@ ipcMain.on("theme-change", (_, data) => {
 //         logger.log("Disconnected from discord. Attemping to reconnect");
 //     });
 // }
-
-// function resetApp() {
-//     fs.unlink(path.join(app.getPath("userData"), "config.json"), err => {
-//         if(err) {
-//             mainWindow.webContents.send("error", "Failed to wipe config");
-//             logger.log(`Failed to wipe config ${err ? err : ""}`);
-//             return;
-//         }
-
-//         accessToken = null;
-
-//         clearInterval(statusUpdate);
-
-//         rpc.clearActivity();
-
-//         mainWindow.loadFile(path.join(__dirname, "static", "configure.html"));
-//         mainWindow.show();
-//         mainWindow.setSkipTaskbar(false);
-        
-//         if(process.platform === "darwin") app.dock.show();
-        
-//         tray.destroy();
-//     });
-// };
-
-// ipcMain.on("config-save", (event, data) => {
-//     if(!data.serverAddress || !data.username || !data.password || !data.port) mainWindow.webContents.send("error", "Invalid server address or login credentials");
-
-//     request.post(`${data.protocol}://${data.serverAddress}:${data.port}/emby/Users/AuthenticateByName`, {
-//         headers: {
-//             "Authorization": `Emby Client="Other", Device="Discord RPC", DeviceId="f848hjf4hufhu5fuh55f5f5ffssdasf", Version=${version}`
-//         },
-//         body: {
-//             "Username": data.username,
-//             "Pw": data.password
-//         },
-//         json: true
-//     }, (err, res, body) => {
-//         if(err || res.statusCode !== 200) {
-//             mainWindow.webContents.send("error", "Invalid server address or login credentials");
-//             logger.log(`Failed to authenticate ${err ? err : ""}`);
-//             return;
-//         }
-
-//         accessToken = body.AccessToken
-
-//         fs.writeFile(path.join(app.getPath("userData"), "config.json"), JSON.stringify(data), err => {
-//             if(err){
-//                 mainWindow.webContents.send("error", "Failed to save config");
-//                 logger.log(`Failed to save config ${err ? err : ""}`);
-//                 return;
-//             }
-
-//             displayPresence();
-           
-//             moveToTray();
-//         });
-//     });
-// });
 
 // async function setStatus() {
 //     let data = await fs.readFileSync(path.join(app.getPath("userData"), "config.json"), "utf8");
@@ -274,27 +272,6 @@ ipcMain.on("theme-change", (_, data) => {
 //     setStatus();
 
 //     statusUpdate = setInterval(setStatus, 15000);
-// }
-
-// function setToken(username, password, serverAddress, port, protocol) {
-//     return new Promise((resolve, reject) => {
-//         request.post(`${protocol}://${serverAddress}:${port}/emby/Users/AuthenticateByName`, {
-//             headers: {
-//                 "Authorization": `Emby Client="Other", Device="Discord RPC", DeviceId="f848hjf4hufhu5fuh55f5f5ffssdasf", Version=${version}`
-//             },
-//             body: {
-//                 "Username": username,
-//                 "Pw": password
-//             },
-//             json: true
-//         }, (err, res, body) => {
-//             if(err || res.statusCode !== 200) return reject(err);
-
-//             accessToken = body.AccessToken;
-
-//             resolve();
-//         });
-//     });
 // }
 
 app.on("ready", () => startApp());
