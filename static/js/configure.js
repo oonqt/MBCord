@@ -33,4 +33,19 @@ ipcRenderer.on("error", (event, msg) => {
     document.getElementById("msg").textContent = msg;
 });
 
+ipcRenderer.on("config-type", (_, data) => {
+    const serverType = document.getElementById("serverType");
+
+    switch(data) {
+        case "emby":
+            document.documentElement.style.setProperty("--color", embyTheme);
+            serverType.textContent = "Switch to Jellyfin?";
+            break;
+        case "jellyfin":
+            document.documentElement.style.setProperty("--color", jellyfinTheme);
+            serverType.textContent = "Switch to Emby?";
+            break
+    }
+})
+
 document.documentElement.style.setProperty("--color", embyTheme);
