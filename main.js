@@ -9,7 +9,7 @@ const Logger = require("./utils/logger");
 const { toZero, createDeviceId } = require("./utils/utils");
 const { version, name } = require("./package.json");
 
-const logger = new Logger((process.defaultApp ? "console" : "file"), app.getPath("userData"));
+const logger = new Logger("file", __dirname);
 const db = new JsonDB(path.join(app.getPath("userData"), "config.json"));
 const startupHandler = new Startup(app);
 
@@ -22,13 +22,14 @@ let statusUpdate;
 async function startApp() {
     mainWindow = new BrowserWindow({
         width: 480,
-        height: 300,
+        height: 310,
         minimizable: false,
         maximizable: false,
         webPreferences: {
             nodeIntegration: true
         },
-        resizable: false
+        resizable: false,
+        title: `Configure ${name}`
     });
 
     // check env to allow dev tools and resizing.......
