@@ -6,4 +6,4 @@ EmbyCord is an open-source Discord rich presence client for the [Emby](https://e
 
 Major rewrite is currently in the works. Better logging, jellyfin support and just general code improvements.
 
-[![It's coming...]](https://niger.gq/u/vud.png)
+[![N|Solid](https://niger.gq/u/vud.png)]
