@@ -1,6 +1,5 @@
 const path = require("path");
 const config = require("config");
-const crypto = require("crypto");
 const { app, BrowserWindow, ipcMain, Tray, Menu, shell, dialog } = require("electron");
 const Startup = require("./utils/startupHandler");
 const JsonDB = require("./utils/JsonDB");
@@ -107,8 +106,7 @@ async function moveToTray() {
     dialog.showMessageBox({ 
         type: "info", 
         title: name, 
-        message: `${name} has been minimized to the tray`, 
-        icon: path.join(__dirname, "icons", "msgbox.png") 
+        message: `${name} has been minimized to the tray`
     });
 
     if(process.platform === "darwin") app.dock.hide(); // hide from dock on macos
@@ -122,7 +120,6 @@ async function resetApp() {
     clearInterval(statusUpdate);
 
     rpc.clearActivity();
-    
     
     await mainWindow.loadFile(path.join(__dirname, "static", "configure.html"));
     mainWindow.show();
