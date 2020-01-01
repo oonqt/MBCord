@@ -6,6 +6,9 @@ const jellyfinTheme = "#7289da";
 document.getElementById("configuration").addEventListener("submit", e => {
     e.preventDefault();
     
+    const invalidFields = document.querySelectorAll(".invalid");
+    invalidFields.forEach(field => field.classList.remove("invalid"));
+
     let serverAddress = document.getElementById("serverAddress").value;
     let username = document.getElementById("username").value;
     let password = document.getElementById("password").value;
@@ -31,10 +34,10 @@ document.getElementById("serverType").addEventListener("click", function() {
 });
 
 ipcRenderer.on("validation-error", (_, data) => {
-    data.forEach(field => {
-        const helperText = document.getElementById(`${field}-text`);
+    data.forEach(fieldName => {
+        const field = document.getElementById(fieldName);
 
-        helperText.hidden = false;
+        field.classList.add("invalid");
     });
 });
 
