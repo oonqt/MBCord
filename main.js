@@ -114,7 +114,7 @@ async function moveToTray() {
     if(process.platform === "darwin") app.dock.hide(); // hide from dock on macos
 }
 
-function resetApp() {
+async function resetApp() {
     db.write({ isConfigured: false });
 
     accessToken = null;
@@ -122,10 +122,12 @@ function resetApp() {
     clearInterval(statusUpdate);
 
     rpc.clearActivity();
-
-    mainWindow.loadFile(path.join(__dirname, "static", "configure.html"));
+    
+    
+    await mainWindow.loadFile(path.join(__dirname, "static", "configure.html"));
     mainWindow.show();
     mainWindow.setSkipTaskbar(false);
+    mainWindow.webContents.send("config-type", db.data().serverType);
 
     if(process.platform === "darwin") app.dock.show();
 
@@ -137,16 +139,19 @@ ipcMain.on("config-save", async (_, data) => {
         .filter(field => !field[1])
         .map(field => field[0]);
 
-    if(emptyFields.length > 0) return mainWindow.webContents.send("validation-error", emptyFields);
+    if(emptyFields.length > 0) {
+        mainWindow.webContents.send("validation-error", emptyFields);
+        dialog.showErrorBox(name, "Please make sure that all the fields are filled in");
+        return;
+    }
 
     try {
-        const token = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version);
+        accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version);
 
-        accessToken = token;
-
-        db.write(data);
+        db.write({ ...data, isConfigured: true });
 
         moveToTray();
+        connectRPC();
     } catch (error) {
         logger.log(error);
         dialog.showErrorBox(name, "Invalid server address or login credentials");
@@ -157,7 +162,7 @@ function getToken(username, password, serverAddress, port, protocol, deviceVersi
     return new Promise((resolve, reject) => {
         request.post(`${protocol}://${serverAddress}:${port}/emby/Users/AuthenticateByName`, {
                 headers: {
-                    Authorization: `Emby Client="Other", Device="${name}", DeviceId="${createDeviceId(deviceVersion)}", Version="${version}"`
+                    Authorization: `Emby Client=Other, Device=${name}, DeviceId=${createDeviceId(deviceVersion)}, Version=${deviceVersion}`
                 },
                 body: {
                     "Username": username,
@@ -166,9 +171,9 @@ function getToken(username, password, serverAddress, port, protocol, deviceVersi
                 json: true
             }, (err, res, body) => {
                 if(err) return reject(err);
-                if(res.statusCode !== 200) return reject(`Failed to authenticate. Status: ${res.statusCode}`);
+                if(res.statusCode !== 200) return reject(`Failed to authenticate. Status: ${res.statusCode}. Reason: ${body}`);
 
-                resolve(body.accessToken);
+                resolve(body.AccessToken);
             });
     })
 }
@@ -186,27 +191,29 @@ function connectRPC() {
                 logger.log("Failed to connect to discord. Attempting to reconnect");
                 setTimeout(connectRPC, 15000);
             });
-    } 
 
-    rpc.transport.once("close", () => {
-        clearInterval(statusUpdate);
-        connectRPC();
-        logger.log("Discord RPC connection terminated");
-    });
+        rpc.transport.once("close", () => {
+            clearInterval(statusUpdate);
+            connectRPC();
+            logger.log("Discord RPC connection terminated. Attempting to reconnect.");
+        });
+    } 
 }
 
 async function setPresence() {
-    const data = await db.data();
+    const data = db.data();
 
     if(!accessToken) accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version)
         .catch(err => logger.log(err));
 
         request(`${data.protocol}://${data.serverAddress}:${data.port}/emby/Sessions`, {
-            Authorization: `Emby Client="Other", Device="${name}", DeviceId="${createDeviceId(version)}", Version="${version}", Token="${accessToken}"`,
+            headers: {
+                "X-Emby-Token": accessToken
+            },
             json: true
         }, (err, res, body) => {
             if(err) return logger.log(`Failed to authenticate: ${err}`);
-            if(res.statusCode !== 200) return logger.log(`Failed to authenticated: ${res.statusCode}`);
+            if(res.statusCode !== 200) return logger.log(`Failed to authenticated: ${res.statusCode}. Reason: ${body}`);
 
             const session = body.filter(session => 
                 session.UserName === data.username && 
