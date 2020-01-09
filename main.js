@@ -69,7 +69,14 @@ async function moveToTray() {
         {
             type: "checkbox",
             label: "Run at Startup",
-            click: () => startupHandler.toggle()
+            click: () => startupHandler.toggle(),
+            checked: startupHandler.isEnabled
+        },
+        {
+            type: "checkbox",
+            label: "Display as Status",
+            click: () => toggleDisplay(),
+            checked: db.data().doDisplayStatus
         },
         {
             type: "separator"
@@ -113,14 +120,32 @@ async function moveToTray() {
     if(process.platform === "darwin") app.dock.hide(); // hide from dock on macos
 }
 
+function toggleDisplay() {
+    let doDisplay = db.data().doDisplayStatus;
+
+    if(doDisplay) {
+        console.log("hide status");
+        db.write({ doDisplayStatus: false });
+        rpc.clearActivity();
+        clearInterval(statusUpdate);
+    } else {
+        console.log("show status");
+        db.write({ doDisplayStatus: true });
+
+        connectRPC();
+    }
+
+    return;
+}
+
 async function resetApp() {
     db.write({ isConfigured: false });
 
     accessToken = null;
 
-    clearInterval(statusUpdate);
+    if(statusUpdate) clearInterval(statusUpdate); // check
 
-    rpc.clearActivity();
+    if(rpc) rpc.clearActivity(); // check
     
     await mainWindow.loadFile(path.join(__dirname, "static", "configure.html"));
     mainWindow.show();
@@ -146,7 +171,7 @@ ipcMain.on("config-save", async (_, data) => {
     try {
         accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version);
 
-        db.write({ ...data, isConfigured: true });
+        db.write({ ...data, isConfigured: true, doDisplayStatus: true });
 
         moveToTray();
         connectRPC();
@@ -177,7 +202,7 @@ function getToken(username, password, serverAddress, port, protocol, deviceVersi
 }
 
 function connectRPC() {
-    if(db.data().isConfigured) {
+    if(db.data().isConfigured && db.data().doDisplayStatus) {
         rpc = new DiscordRPC.Client({ transport: "ipc" });
         rpc.login({ clientId: config.get("clientIds")[db.data().serverType] })
             .then(() => {
