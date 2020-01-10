@@ -42,6 +42,7 @@ async function startApp() {
     }
 
     if(db.data().isConfigured === true) {
+        if(!db.data().doDisplayStatus) db.write({ doDisplayStatus: true }); // for existing installations that do not have doDisplayStatus in their config. This could be removed in future releases.
         moveToTray();
         connectRPC();
     } else {
