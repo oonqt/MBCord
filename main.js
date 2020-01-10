@@ -124,12 +124,10 @@ function toggleDisplay() {
     let doDisplay = db.data().doDisplayStatus;
 
     if(doDisplay) {
-        console.log("hide status");
         db.write({ doDisplayStatus: false });
         rpc.clearActivity();
         clearInterval(statusUpdate);
     } else {
-        console.log("show status");
         db.write({ doDisplayStatus: true });
 
         connectRPC();
