@@ -23,7 +23,6 @@
     "node-7z": "^1.1.1"
   },
   "dependencies": {
-    "config": "^3.2.4",
     "discord-rpc": "^3.0.2",
     "request": "^2.88.0"
   }

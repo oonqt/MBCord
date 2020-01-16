@@ -1,5 +1,4 @@
 const path = require("path");
-const config = require("config");
 const { app, BrowserWindow, ipcMain, Tray, Menu, shell, dialog } = require("electron");
 const Startup = require("./utils/startupHandler");
 const JsonDB = require("./utils/JsonDB");
@@ -8,6 +7,7 @@ const DiscordRPC = require("discord-rpc");
 const Logger = require("./utils/logger");
 const { toZero, createDeviceId } = require("./utils/utils");
 const { version, name } = require("./package.json");
+const { clientIds } = require("./config/default.json");
 
 const logger = new Logger((process.defaultApp ? "console" : "file"), app.getPath("userData"));
 const db = new JsonDB(path.join(app.getPath("userData"), "config.json"));
@@ -63,7 +63,7 @@ ipcMain.on("theme-change", (_, data) => {
     }
 });
 
-async function moveToTray() {
+function moveToTray() {
     tray = new Tray(path.join(__dirname, "icons", "tray.png"));
 
     const contextMenu = Menu.buildFromTemplate([
@@ -203,7 +203,7 @@ function getToken(username, password, serverAddress, port, protocol, deviceVersi
 function connectRPC() {
     if(db.data().isConfigured && db.data().doDisplayStatus) {
         rpc = new DiscordRPC.Client({ transport: "ipc" });
-        rpc.login({ clientId: config.get("clientIds")[db.data().serverType] })
+        rpc.login({ clientId: clientIds[db.data().serverType] })
             .then(() => {
                 setPresence();
 
@@ -228,70 +228,80 @@ async function setPresence() {
     if(!accessToken) accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version)
         .catch(err => logger.log(err));
 
-        request(`${data.protocol}://${data.serverAddress}:${data.port}/emby/Sessions`, {
-            headers: {
-                "X-Emby-Token": accessToken
-            },
-            json: true
-        }, (err, res, body) => {
-            if(err) return logger.log(`Failed to authenticate: ${err}`);
-            if(res.statusCode !== 200) return logger.log(`Failed to authenticated: ${res.statusCode}. Reason: ${body}`);
+    request(`${data.protocol}://${data.serverAddress}:${data.port}/emby/Sessions`, {
+        headers: {
+            "X-Emby-Token": accessToken
+        },
+        json: true
+    }, (err, res, body) => {
+        if(err) return logger.log(`Failed to authenticate: ${err}`);
+        if(res.statusCode !== 200) return logger.log(`Failed to authenticated: ${res.statusCode}. Reason: ${body}`);
 
-            const session = body.filter(session => 
-                session.UserName === data.username && 
-                session.DeviceName !== name &&
-                session.NowPlayingItem)[0];
+        const session = body.filter(session => 
+            session.UserName === data.username && 
+            session.DeviceName !== name &&
+            session.NowPlayingItem)[0];
 
-            if(session) {
-                switch(session.NowPlayingItem.Type) {
-                    case "Episode":
-                        rpc.setActivity({
-                            details: `Watching ${session.NowPlayingItem.SeriesName}`,
-                            state: `S${toZero(session.NowPlayingItem.ParentIndexNumber)}E${toZero(session.NowPlayingItem.IndexNumber)}: ${session.NowPlayingItem.Name}`,
-                            largeImageKey: "large",
-                            largeImageText: `Watching on ${session.Client}`,
-                            smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
-                            smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-                            instance: false
-                        });
-                        break;
-                    case "Movie":
-                        rpc.setActivity({
-                            details: "Watching a Movie",
-                            state: session.NowPlayingItem.Name,
-                            largeImageKey: "large",
-                            largeImageText: `Watching on ${session.Client}`,
-                            smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
-                            smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-                            instance: false
-                        });
-                        break;
-                    case "Audio": 
-                        rpc.setActivity({
-                            details: `Listening to ${session.NowPlayingItem.Name}`,
-                            state: `By ${session.NowPlayingItem.AlbumArtist}`,
-                            largeImageKey: "large",
-                            largeImageText: `Listening on ${session.Client}`,
-                            smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
-                            smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-                            instance: false
-                        });
-                        break;
-                    default: 
-                        rpc.setActivity({
-                            details: "Watching Other Content",
-                            state: session.NowPlayingItem.Name,
-                            largeImageKey: "large",
-                            largeImageText: `Watching on ${session.Client}`,
-                            smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
-                            smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-                            instance: false
-                        });
-                }   
-            } else {
-                if(rpc) rpc.clearActivity();
-            }
-        });
+        const currentEpochSeconds = new Date().getTime() / 1000; 
+
+        if(session) {
+            switch(session.NowPlayingItem.Type) {
+                case "Episode":
+                    rpc.setActivity({
+                        details: `Watching ${session.NowPlayingItem.SeriesName}`,
+                        state: `S${toZero(session.NowPlayingItem.ParentIndexNumber)}E${toZero(session.NowPlayingItem.IndexNumber)}: ${session.NowPlayingItem.Name}`,
+                        largeImageKey: "large",
+                        largeImageText: `Watching on ${session.Client}`,
+                        smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
+                        smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                        instance: false,
+                        endTimestamp: !session.PlayState.IsPaused && calcEndTimestamp(session, currentEpochSeconds)
+                    });
+                    break;
+                case "Movie":
+                    rpc.setActivity({
+                        details: "Watching a Movie",
+                        state: session.NowPlayingItem.Name,
+                        largeImageKey: "large",
+                        largeImageText: `Watching on ${session.Client}`,
+                        smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
+                        smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                        instance: false,
+                        endTimestamp: !session.PlayState.IsPaused && calcEndTimestamp(session, currentEpochSeconds)
+                    });
+                    break;
+                case "Audio": 
+                    rpc.setActivity({
+                        details: `Listening to ${session.NowPlayingItem.Name}`,
+                        state: `By ${session.NowPlayingItem.AlbumArtist}`,
+                        largeImageKey: "large",
+                        largeImageText: `Listening on ${session.Client}`,
+                        smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
+                        smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                        instance: false,
+                        endTimestamp: !session.PlayState.IsPaused && calcEndTimestamp(session, currentEpochSeconds)
+                    });
+                    break;
+                default: 
+                    rpc.setActivity({
+                        details: "Watching Other Content",
+                        state: session.NowPlayingItem.Name,
+                        largeImageKey: "large",
+                        largeImageText: `Watching on ${session.Client}`,
+                        smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
+                        smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                        instance: false,
+                        endTimestamp: !session.PlayState.IsPaused && calcEndTimestamp(session, currentEpochSeconds)
+                    });
+            }   
+        } else {
+            if(rpc) rpc.clearActivity();
+        }
+    });
+}
+
+function calcEndTimestamp(session, currentEpochSeconds) {
+    return Math.round((currentEpochSeconds + Math.round(((session.NowPlayingItem.RunTimeTicks - session.PlayState.PositionTicks) / 10000) / 1000)));
 }
 
 app.on("ready", () => startApp());

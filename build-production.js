@@ -3,8 +3,6 @@ const path = require("path");
 const { execSync } = require("child_process");  
 const fs = require("fs");
 
-// figure out why builds are nested within several folders
-
 async function main() {
     console.log("Packaging all platforms...");
 
