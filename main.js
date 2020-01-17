@@ -6,7 +6,7 @@ const request = require("request");
 const DiscordRPC = require("discord-rpc");
 const Logger = require("./utils/logger");
 const { toZero, createDeviceId } = require("./utils/utils");
-const { version, name } = require("./package.json");
+const { version, name, author, homepage } = require("./package.json");
 const { clientIds } = require("./config/default.json");
 
 const logger = new Logger((process.defaultApp ? "console" : "file"), app.getPath("userData"));
@@ -31,6 +31,8 @@ async function startApp() {
         resizable: false,
         title: `Configure ${name}`
     });
+
+    setTimeout(checkUpdates, 2500);
 
     // check env to allow dev tools and resizing.......
     if(process.defaultApp) {
@@ -296,6 +298,33 @@ async function setPresence() {
             }   
         } else {
             if(rpc) rpc.clearActivity();
+        }
+    });
+}
+
+function checkUpdates() {
+    request(`https://api.github.com/repos/${author}/${name}/releases/latest`, 
+        {
+            headers: {
+                "User-Agent": name
+            }
+        },
+    (err, _, body) => {
+        if(err) return logger.log(err);
+    
+        body = JSON.parse(body);
+    
+        if(body.tag_name !== version) {
+            dialog.showMessageBox({
+                type: "info",
+                buttons: ["Okay", "Get Latest Version"],
+                message: "A new version is available!",
+                detail: `Your version is ${version}. The latest version is currently ${body.tag_name}`
+            }, index => {
+                if(index === 1) {
+                    shell.openExternal(`${homepage}/releases/latest`);
+                }
+            });
         }
     });
 }

@@ -15,7 +15,7 @@
     "build:arm64": "electron-packager . MBCord --out=build --overwrite --asar --icon=icons/win/icon.ico --platform=linux --arch=arm64",
     "build:win32": "electron-packager . MBCord --out=build --overwrite --asar --icon=icons/win/icon.ico --platform=win32 --arch=ia32"
   },
-  "author": "Luke C",
+  "author": "oonqt",
   "license": "MIT",
   "devDependencies": {
     "electron": "^6.0.7",
@@ -25,5 +25,6 @@
   "dependencies": {
     "discord-rpc": "^3.0.2",
     "request": "^2.88.0"
-  }
+  },
+  "homepage": "https://github.com/oonqt/MBCord"
 }
