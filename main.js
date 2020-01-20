@@ -29,10 +29,15 @@ async function startApp() {
             nodeIntegration: true
         },
         resizable: false,
-        title: `Configure ${name}`
+        title: `Configure ${name}`,
     });
 
     setTimeout(checkUpdates, 2500);
+
+    const lock = app.requestSingleInstanceLock();
+    if(!lock) {
+        app.quit();
+    }
 
     // check env to allow dev tools and resizing.......
     if(process.defaultApp) {
