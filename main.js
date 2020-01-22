@@ -129,7 +129,7 @@ function moveToTray() {
 }
 
 function toggleDisplay() {
-    let doDisplay = db.data().doDisplayStatus;
+    const doDisplay = db.data().doDisplayStatus;
 
     if(doDisplay) {
         db.write({ doDisplayStatus: false });
