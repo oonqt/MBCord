@@ -316,7 +316,7 @@ const presenceReducer = data => {
     if(data.largeImageText) presenceData.largeImageText = data.largeImageText;
     if(data.smallImageKey) presenceData.smallImageKey = data.smallImageKey;
     if(data.smallImageText) presenceData.smallImageText = data.smallImageText;
-    if(data.endTimestamp) presenseData.endTimestamp = data.endTimestamp;
+    if(data.endTimestamp) presenceData.endTimestamp = data.endTimestamp;
     if(data.startTimestamp) presenceData.startTimestamp = data.startTimestamp;
     presenceData.instance = false;
 
