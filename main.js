@@ -254,57 +254,73 @@ const setPresence = async () => {
         if(session) {
             switch(session.NowPlayingItem.Type) {
                 case "Episode":
-                    rpc.setActivity({
-                        details: `Watching ${session.NowPlayingItem.SeriesName}`,
-                        state: `S${toZero(session.NowPlayingItem.ParentIndexNumber)}E${toZero(session.NowPlayingItem.IndexNumber)}: ${session.NowPlayingItem.Name}`,
-                        largeImageKey: "large",
-                        largeImageText: `Watching on ${session.Client}`,
-                        smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
-                        smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-                        instance: false,
-                        endTimestamp: !session.PlayState.IsPaused && calcEndTimestamp(session, currentEpochSeconds)
-                    });
+                    rpc.setActivity(presenceReducer({
+                            details: `Watching ${session.NowPlayingItem.SeriesName}`,
+                            state: `S${toZero(session.NowPlayingItem.ParentIndexNumber)}E${toZero(session.NowPlayingItem.IndexNumber)}: ${session.NowPlayingItem.Name}`,
+                            largeImageKey: "large",
+                            largeImageText: `Watching on ${session.Client}`,
+                            smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
+                            smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                            endTimestamp: !session.PlayState.IsPaused && calcEndTimestamp(session, currentEpochSeconds)
+                        })
+                    );
                     break;
                 case "Movie":
-                    rpc.setActivity({
-                        details: "Watching a Movie",
-                        state: session.NowPlayingItem.Name,
-                        largeImageKey: "large",
-                        largeImageText: `Watching on ${session.Client}`,
-                        smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
-                        smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-                        instance: false,
-                        endTimestamp: !session.PlayState.IsPaused && calcEndTimestamp(session, currentEpochSeconds)
-                    });
+                    rpc.setActivity(presenceReducer({
+                            details: "Watching a Movie",
+                            state: session.NowPlayingItem.Name,
+                            largeImageKey: "large",
+                            largeImageText: `Watching on ${session.Client}`,
+                            smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
+                            smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                            endTimestamp: !session.PlayState.IsPaused && calcEndTimestamp(session, currentEpochSeconds)
+                        })
+                    );
                     break;
                 case "Audio": 
-                    rpc.setActivity({
-                        details: `Listening to ${session.NowPlayingItem.Name}`,
-                        state: `By ${session.NowPlayingItem.AlbumArtist}`,
-                        largeImageKey: "large",
-                        largeImageText: `Listening on ${session.Client}`,
-                        smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
-                        smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-                        instance: false,
-                        endTimestamp: !session.PlayState.IsPaused && calcEndTimestamp(session, currentEpochSeconds)
-                    });
+                    rpc.setActivity(presenceReducer({
+                            details: `Listening to ${session.NowPlayingItem.Name}`,
+                            state: `By ${session.NowPlayingItem.AlbumArtist}`,
+                            largeImageKey: "large",
+                            largeImageText: `Listening on ${session.Client}`,
+                            smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
+                            smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                            endTimestamp: !session.PlayState.IsPaused && calcEndTimestamp(session, currentEpochSeconds)
+                        })
+                    );
                     break;
                 default: 
-                    rpc.setActivity({
-                        details: "Watching Other Content",
-                        state: session.NowPlayingItem.Name,
-                        largeImageKey: "large",
-                        largeImageText: `Watching on ${session.Client}`,
-                        smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
-                        smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-                        instance: false,
-                        endTimestamp: !session.PlayState.IsPaused && calcEndTimestamp(session, currentEpochSeconds)
-                    });
+                    rpc.setActivity(presenceReducer({
+                            details: "Watching Other Content",
+                            state: session.NowPlayingItem.Name,
+                            largeImageKey: "large",
+                            largeImageText: `Watching on ${session.Client}`,
+                            smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
+                            smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                            endTimestamp: !session.PlayState.IsPaused && calcEndTimestamp(session, currentEpochSeconds)
+                        })
+                    );
             }   
         } else {
             if(rpc) rpc.clearActivity();
         }
     });
+}
+
+const presenceReducer = data => {
+    const presenceData = {};
+
+    if(data.details) presenceData.details = data.details;
+    if(data.state) presenceData.state = data.state;
+    if(data.largeImageKey) presenceData.largeImageKey = data.largeImageKey;
+    if(data.largeImageText) presenceData.largeImageText = data.largeImageText;
+    if(data.smallImageKey) presenceData.smallImageKey = data.smallImageKey;
+    if(data.smallImageText) presenceData.smallImageText = data.smallImageText;
+    if(data.endTimestamp) presenseData.endTimestamp = data.endTimestamp;
+    if(data.startTimestamp) presenceData.startTimestamp = data.startTimestamp;
+    presenceData.instance = false;
+
+    return presenceData;
 }
 
 const checkUpdates = () => {
