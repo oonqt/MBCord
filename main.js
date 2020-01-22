@@ -19,7 +19,7 @@ let tray;
 let accessToken;
 let statusUpdate;
 
-async function startApp() {
+const startApp = async() => {
     mainWindow = new BrowserWindow({
         width: 480,
         height: 310,
@@ -36,7 +36,7 @@ async function startApp() {
 
     const lock = app.requestSingleInstanceLock();
     if(!lock) {
-        app.quit();
+        app.quit(); // quit if multiple instances are found....
     }
 
     // check env to allow dev tools and resizing.......
@@ -70,7 +70,31 @@ ipcMain.on("theme-change", (_, data) => {
     }
 });
 
-function moveToTray() {
+ipcMain.on("config-save", async (_, data) => {
+    const emptyFields = Object.entries(data)
+    .filter(field => !field[1])
+    .map(field => field[0]);
+    
+    if(emptyFields.length > 0) {
+        mainWindow.webContents.send("validation-error", emptyFields);
+        dialog.showErrorBox(name, "Please make sure that all the fields are filled in");
+        return;
+    }
+    
+    try {
+        accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version);
+        
+        db.write({ ...data, isConfigured: true, doDisplayStatus: true });
+        
+        moveToTray();
+        connectRPC();
+    } catch (error) {
+        logger.log(error);
+        dialog.showErrorBox(name, "Invalid server address or login credentials");
+    }
+});
+
+const moveToTray = () => {
     tray = new Tray(path.join(__dirname, "icons", "tray.png"));
 
     const contextMenu = Menu.buildFromTemplate([
@@ -128,7 +152,7 @@ function moveToTray() {
     if(process.platform === "darwin") app.dock.hide(); // hide from dock on macos
 }
 
-function toggleDisplay() {
+const toggleDisplay = () => {
     const doDisplay = db.data().doDisplayStatus;
 
     if(doDisplay) {
@@ -144,7 +168,7 @@ function toggleDisplay() {
     return;
 }
 
-async function resetApp() {
+const resetApp = async() => {
     db.write({ isConfigured: false });
 
     accessToken = null;
@@ -163,31 +187,7 @@ async function resetApp() {
     tray.destroy();
 }
 
-ipcMain.on("config-save", async (_, data) => {
-    const emptyFields = Object.entries(data)
-        .filter(field => !field[1])
-        .map(field => field[0]);
-
-    if(emptyFields.length > 0) {
-        mainWindow.webContents.send("validation-error", emptyFields);
-        dialog.showErrorBox(name, "Please make sure that all the fields are filled in");
-        return;
-    }
-
-    try {
-        accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version);
-
-        db.write({ ...data, isConfigured: true, doDisplayStatus: true });
-
-        moveToTray();
-        connectRPC();
-    } catch (error) {
-        logger.log(error);
-        dialog.showErrorBox(name, "Invalid server address or login credentials");
-    }
-});
-
-function getToken(username, password, serverAddress, port, protocol, deviceVersion) {
+const getToken = (username, password, serverAddress, port, protocol, deviceVersion) => {
     return new Promise((resolve, reject) => {
         request.post(`${protocol}://${serverAddress}:${port}/emby/Users/AuthenticateByName`, {
                 headers: {
@@ -207,7 +207,7 @@ function getToken(username, password, serverAddress, port, protocol, deviceVersi
     })
 }
 
-function connectRPC() {
+const connectRPC = () => {
     if(db.data().isConfigured && db.data().doDisplayStatus) {
         rpc = new DiscordRPC.Client({ transport: "ipc" });
         rpc.login({ clientId: clientIds[db.data().serverType] })
@@ -229,7 +229,7 @@ function connectRPC() {
     } 
 }
 
-async function setPresence() {
+const setPresence = async () => {
     const data = db.data();
 
     if(!accessToken) accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version)
@@ -307,7 +307,7 @@ async function setPresence() {
     });
 }
 
-function checkUpdates() {
+const checkUpdates = () => {
     request(`https://api.github.com/repos/${author}/${name}/releases/latest`, 
         {
             headers: {
@@ -334,7 +334,7 @@ function checkUpdates() {
     });
 }
 
-function calcEndTimestamp(session, currentEpochSeconds) {
+const calcEndTimestamp = (session, currentEpochSeconds) => {
     return Math.round((currentEpochSeconds + Math.round(((session.NowPlayingItem.RunTimeTicks - session.PlayState.PositionTicks) / 10000) / 1000)));
 }
 
