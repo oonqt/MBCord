@@ -7,7 +7,7 @@ const DiscordRPC = require("discord-rpc");
 const Logger = require("./utils/logger");
 const { toZero, createDeviceId } = require("./utils/utils");
 const { version, name, author, homepage } = require("./package.json");
-const { clientIds } = require("./config/default.json");
+const { clientIds, UUID } = require("./config/default.json");
 
 const logger = new Logger((process.defaultApp ? "console" : "file"), app.getPath("userData"));
 const db = new JsonDB(path.join(app.getPath("userData"), "config.json"));
@@ -175,7 +175,7 @@ ipcMain.on("config-save", async (_, data) => {
     }
 
     try {
-        accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version);
+        accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version, name, UUID);
 
         db.write({ ...data, isConfigured: true, doDisplayStatus: true });
 
@@ -187,11 +187,11 @@ ipcMain.on("config-save", async (_, data) => {
     }
 });
 
-function getToken(username, password, serverAddress, port, protocol, deviceVersion) {
+function getToken(username, password, serverAddress, port, protocol, deviceVersion, deviceName, deviceId) {
     return new Promise((resolve, reject) => {
         request.post(`${protocol}://${serverAddress}:${port}/emby/Users/AuthenticateByName`, {
                 headers: {
-                    Authorization: `Emby Client=Other, Device=${name}, DeviceId=${createDeviceId(deviceVersion)}, Version=${deviceVersion}`
+                    Authorization: `Emby Client=Other, Device=${deviceName}, DeviceId=${deviceId}, Version=${deviceVersion}`
                 },
                 body: {
                     "Username": username,
@@ -232,7 +232,7 @@ function connectRPC() {
 async function setPresence() {
     const data = db.data();
 
-    if(!accessToken) accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version)
+    if(!accessToken) accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version, name, UUID)
         .catch(err => logger.log(err));
 
     request(`${data.protocol}://${data.serverAddress}:${data.port}/emby/Sessions`, {
@@ -248,16 +248,13 @@ async function setPresence() {
             session.UserName === data.username && 
             session.DeviceName !== name &&
             session.NowPlayingItem)[0];
-
-        const currentEpochSeconds = new Date().getTime() / 1000; 
-        const endsAt = Math.round(calcEndTimestamp(session, currentEpochSeconds) - currentEpochSeconds);
-
-        setTimeout(() => {
-            console.log("ended...")
-        }, endsAt);
-
-        if(session) {
-            console.log(`ends: ${Math.round(calcEndTimestamp(session, currentEpochSeconds) - currentEpochSeconds)}`)
+            
+            if(session) {
+            const currentEpochSeconds = new Date().getTime() / 1000; 
+            const endTimestamp = Math.round((currentEpochSeconds + Math.round(((session.NowPlayingItem.RunTimeTicks - session.PlayState.PositionTicks) / 10000) / 1000)));
+            const endsIn = Math.round(calcEndTimestamp(session, currentEpochSeconds) - currentEpochSeconds);
+            
+            setTimeout(setPresence, endsIn * 1000);
 
             switch(session.NowPlayingItem.Type) {
                 case "Episode":
@@ -269,7 +266,7 @@ async function setPresence() {
                         smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
                         smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
                         instance: false,
-                        endTimestamp: !session.PlayState.IsPaused && calcEndTimestamp(session, currentEpochSeconds)
+                        endTimestamp: !session.PlayState.IsPaused && endTimestamp
                     });
                     break;
                 case "Movie":
@@ -281,7 +278,7 @@ async function setPresence() {
                         smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
                         smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
                         instance: false,
-                        endTimestamp: !session.PlayState.IsPaused && calcEndTimestamp(session, currentEpochSeconds)
+                        endTimestamp: !session.PlayState.IsPaused && endTimestamp
                     });
                     break;
                 case "Audio": 
@@ -293,7 +290,7 @@ async function setPresence() {
                         smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
                         smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
                         instance: false,
-                        endTimestamp: !session.PlayState.IsPaused && calcEndTimestamp(session, currentEpochSeconds)
+                        endTimestamp: !session.PlayState.IsPaused && endTimestamp
                     });
                     break;
                 default: 
@@ -305,7 +302,7 @@ async function setPresence() {
                         smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
                         smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
                         instance: false,
-                        endTimestamp: !session.PlayState.IsPaused && calcEndTimestamp(session, currentEpochSeconds)
+                        endTimestamp: !session.PlayState.IsPaused && endTimestamp
                     });
             }   
         } else {
