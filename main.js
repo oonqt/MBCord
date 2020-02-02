@@ -19,7 +19,7 @@ let tray;
 let accessToken;
 let statusUpdate;
 
-const startApp = async() => {
+async function startApp() {
     mainWindow = new BrowserWindow({
         width: 480,
         height: 310,
@@ -29,7 +29,7 @@ const startApp = async() => {
             nodeIntegration: true
         },
         resizable: false,
-        title: `Configure ${name}`,
+        title: `Configure ${name}`
     });
 
     setTimeout(checkUpdates, 2500);
@@ -70,31 +70,7 @@ ipcMain.on("theme-change", (_, data) => {
     }
 });
 
-ipcMain.on("config-save", async (_, data) => {
-    const emptyFields = Object.entries(data)
-    .filter(field => !field[1])
-    .map(field => field[0]);
-    
-    if(emptyFields.length > 0) {
-        mainWindow.webContents.send("validation-error", emptyFields);
-        dialog.showErrorBox(name, "Please make sure that all the fields are filled in");
-        return;
-    }
-    
-    try {
-        accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version);
-        
-        db.write({ ...data, isConfigured: true, doDisplayStatus: true });
-        
-        moveToTray();
-        connectRPC();
-    } catch (error) {
-        logger.log(error);
-        dialog.showErrorBox(name, "Invalid server address or login credentials");
-    }
-});
-
-const moveToTray = () => {
+function moveToTray() {
     tray = new Tray(path.join(__dirname, "icons", "tray.png"));
 
     const contextMenu = Menu.buildFromTemplate([
@@ -152,8 +128,8 @@ const moveToTray = () => {
     if(process.platform === "darwin") app.dock.hide(); // hide from dock on macos
 }
 
-const toggleDisplay = () => {
-    const doDisplay = db.data().doDisplayStatus;
+function toggleDisplay() {
+    let doDisplay = db.data().doDisplayStatus;
 
     if(doDisplay) {
         db.write({ doDisplayStatus: false });
@@ -168,7 +144,7 @@ const toggleDisplay = () => {
     return;
 }
 
-const resetApp = async() => {
+async function resetApp() {
     db.write({ isConfigured: false });
 
     accessToken = null;
@@ -187,7 +163,31 @@ const resetApp = async() => {
     tray.destroy();
 }
 
-const getToken = (username, password, serverAddress, port, protocol, deviceVersion) => {
+ipcMain.on("config-save", async (_, data) => {
+    const emptyFields = Object.entries(data)
+        .filter(field => !field[1])
+        .map(field => field[0]);
+
+    if(emptyFields.length > 0) {
+        mainWindow.webContents.send("validation-error", emptyFields);
+        dialog.showErrorBox(name, "Please make sure that all the fields are filled in");
+        return;
+    }
+
+    try {
+        accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version);
+
+        db.write({ ...data, isConfigured: true, doDisplayStatus: true });
+
+        moveToTray();
+        connectRPC();
+    } catch (error) {
+        logger.log(error);
+        dialog.showErrorBox(name, "Invalid server address or login credentials");
+    }
+});
+
+function getToken(username, password, serverAddress, port, protocol, deviceVersion) {
     return new Promise((resolve, reject) => {
         request.post(`${protocol}://${serverAddress}:${port}/emby/Users/AuthenticateByName`, {
                 headers: {
@@ -207,7 +207,7 @@ const getToken = (username, password, serverAddress, port, protocol, deviceVersi
     })
 }
 
-const connectRPC = () => {
+function connectRPC() {
     if(db.data().isConfigured && db.data().doDisplayStatus) {
         rpc = new DiscordRPC.Client({ transport: "ipc" });
         rpc.login({ clientId: clientIds[db.data().serverType] })
@@ -229,7 +229,7 @@ const connectRPC = () => {
     } 
 }
 
-const setPresence = async () => {
+async function setPresence() {
     const data = db.data();
 
     if(!accessToken) accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version)
@@ -250,56 +250,63 @@ const setPresence = async () => {
             session.NowPlayingItem)[0];
 
         const currentEpochSeconds = new Date().getTime() / 1000; 
+        const endsAt = Math.round(calcEndTimestamp(session, currentEpochSeconds) - currentEpochSeconds);
+
+        setTimeout(() => {
+            console.log("ended...")
+        }, endsAt);
 
         if(session) {
+            console.log(`ends: ${Math.round(calcEndTimestamp(session, currentEpochSeconds) - currentEpochSeconds)}`)
+
             switch(session.NowPlayingItem.Type) {
                 case "Episode":
-                    rpc.setActivity(presenceReducer({
-                            details: `Watching ${session.NowPlayingItem.SeriesName}`,
-                            state: `S${toZero(session.NowPlayingItem.ParentIndexNumber)}E${toZero(session.NowPlayingItem.IndexNumber)}: ${session.NowPlayingItem.Name}`,
-                            largeImageKey: "large",
-                            largeImageText: `Watching on ${session.Client}`,
-                            smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
-                            smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-                            endTimestamp: !session.PlayState.IsPaused && calcEndTimestamp(session, currentEpochSeconds)
-                        })
-                    );
+                    rpc.setActivity({
+                        details: `Watching ${session.NowPlayingItem.SeriesName}`,
+                        state: `S${toZero(session.NowPlayingItem.ParentIndexNumber)}E${toZero(session.NowPlayingItem.IndexNumber)}: ${session.NowPlayingItem.Name}`,
+                        largeImageKey: "large",
+                        largeImageText: `Watching on ${session.Client}`,
+                        smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
+                        smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                        instance: false,
+                        endTimestamp: !session.PlayState.IsPaused && calcEndTimestamp(session, currentEpochSeconds)
+                    });
                     break;
                 case "Movie":
-                    rpc.setActivity(presenceReducer({
-                            details: "Watching a Movie",
-                            state: session.NowPlayingItem.Name,
-                            largeImageKey: "large",
-                            largeImageText: `Watching on ${session.Client}`,
-                            smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
-                            smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-                            endTimestamp: !session.PlayState.IsPaused && calcEndTimestamp(session, currentEpochSeconds)
-                        })
-                    );
+                    rpc.setActivity({
+                        details: "Watching a Movie",
+                        state: session.NowPlayingItem.Name,
+                        largeImageKey: "large",
+                        largeImageText: `Watching on ${session.Client}`,
+                        smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
+                        smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                        instance: false,
+                        endTimestamp: !session.PlayState.IsPaused && calcEndTimestamp(session, currentEpochSeconds)
+                    });
                     break;
                 case "Audio": 
-                    rpc.setActivity(presenceReducer({
-                            details: `Listening to ${session.NowPlayingItem.Name}`,
-                            state: `By ${session.NowPlayingItem.AlbumArtist}`,
-                            largeImageKey: "large",
-                            largeImageText: `Listening on ${session.Client}`,
-                            smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
-                            smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-                            endTimestamp: !session.PlayState.IsPaused && calcEndTimestamp(session, currentEpochSeconds)
-                        })
-                    );
+                    rpc.setActivity({
+                        details: `Listening to ${session.NowPlayingItem.Name}`,
+                        state: `By ${session.NowPlayingItem.AlbumArtist}`,
+                        largeImageKey: "large",
+                        largeImageText: `Listening on ${session.Client}`,
+                        smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
+                        smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                        instance: false,
+                        endTimestamp: !session.PlayState.IsPaused && calcEndTimestamp(session, currentEpochSeconds)
+                    });
                     break;
                 default: 
-                    rpc.setActivity(presenceReducer({
-                            details: "Watching Other Content",
-                            state: session.NowPlayingItem.Name,
-                            largeImageKey: "large",
-                            largeImageText: `Watching on ${session.Client}`,
-                            smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
-                            smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-                            endTimestamp: !session.PlayState.IsPaused && calcEndTimestamp(session, currentEpochSeconds)
-                        })
-                    );
+                    rpc.setActivity({
+                        details: "Watching Other Content",
+                        state: session.NowPlayingItem.Name,
+                        largeImageKey: "large",
+                        largeImageText: `Watching on ${session.Client}`,
+                        smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
+                        smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                        instance: false,
+                        endTimestamp: !session.PlayState.IsPaused && calcEndTimestamp(session, currentEpochSeconds)
+                    });
             }   
         } else {
             if(rpc) rpc.clearActivity();
@@ -307,23 +314,7 @@ const setPresence = async () => {
     });
 }
 
-const presenceReducer = data => {
-    const presenceData = {};
-
-    if(data.details) presenceData.details = data.details;
-    if(data.state) presenceData.state = data.state;
-    if(data.largeImageKey) presenceData.largeImageKey = data.largeImageKey;
-    if(data.largeImageText) presenceData.largeImageText = data.largeImageText;
-    if(data.smallImageKey) presenceData.smallImageKey = data.smallImageKey;
-    if(data.smallImageText) presenceData.smallImageText = data.smallImageText;
-    if(data.endTimestamp) presenceData.endTimestamp = data.endTimestamp;
-    if(data.startTimestamp) presenceData.startTimestamp = data.startTimestamp;
-    presenceData.instance = false;
-
-    return presenceData;
-}
-
-const checkUpdates = () => {
+function checkUpdates() {
     request(`https://api.github.com/repos/${author}/${name}/releases/latest`, 
         {
             headers: {
@@ -350,7 +341,7 @@ const checkUpdates = () => {
     });
 }
 
-const calcEndTimestamp = (session, currentEpochSeconds) => {
+function calcEndTimestamp(session, currentEpochSeconds) {
     return Math.round((currentEpochSeconds + Math.round(((session.NowPlayingItem.RunTimeTicks - session.PlayState.PositionTicks) / 10000) / 1000)));
 }
 
