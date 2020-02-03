@@ -32,7 +32,7 @@ async function startApp() {
         title: `Configure ${name}`
     });
 
-    setTimeout(checkUpdates, 2500);
+    setTimeout(() => checkUpdates(author, name, homepage, version), 2500);
 
     const lock = app.requestSingleInstanceLock();
     if(!lock) {
@@ -325,7 +325,7 @@ async function setPresence() {
     });
 }
 
-function checkUpdates() {
+function checkUpdates(author, name, homepage, version) {
     request(`https://api.github.com/repos/${author}/${name}/releases/latest`, 
         {
             headers: {
