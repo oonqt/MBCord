@@ -16,7 +16,6 @@ const startupHandler = new Startup(app);
 let rpc;
 let mainWindow;
 let tray;
-let accessToken;
 let statusUpdate;
 
 async function startApp() {
@@ -145,9 +144,7 @@ function toggleDisplay() {
 }
 
 async function resetApp() {
-    db.write({ isConfigured: false });
-
-    accessToken = null;
+    db.write({ isConfigured: false, token: null });
 
     if(statusUpdate) clearInterval(statusUpdate); // check
 
@@ -175,8 +172,6 @@ ipcMain.on("config-save", async (_, data) => {
     }
 
     try {
-        accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version, name, UUID);
-
         db.write({ ...data, isConfigured: true, doDisplayStatus: true });
 
         moveToTray();
@@ -193,7 +188,7 @@ function getToken(username, password, serverAddress, port, protocol, deviceVersi
         const ct = new Date().getTime();
 
         if(dbData.authToken && dbData.authToken.exp > ct) {
-            resolve(dbData.authToken.token)
+            resolve(dbData.authToken.token);
         } else {
                 request.post(`${protocol}://${serverAddress}:${port}/emby/Users/AuthenticateByName`, {
                         headers: {
@@ -242,7 +237,7 @@ function connectRPC() {
 async function setPresence() {
     const data = db.data();
 
-    if(!accessToken) accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version, name, UUID)
+    const accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version, name, UUID)
         .catch(err => logger.log(err));
 
     request(`${data.protocol}://${data.serverAddress}:${data.port}/emby/Sessions`, {
