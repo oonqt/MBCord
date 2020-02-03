@@ -16,6 +16,7 @@ const startupHandler = new Startup(app);
 let rpc;
 let mainWindow;
 let tray;
+let accessToken;
 let statusUpdate;
 
 async function startApp() {
@@ -144,7 +145,9 @@ function toggleDisplay() {
 }
 
 async function resetApp() {
-    db.write({ isConfigured: false, token: null });
+    db.write({ isConfigured: false });
+
+    accessToken = null;
 
     if(statusUpdate) clearInterval(statusUpdate); // check
 
@@ -172,6 +175,8 @@ ipcMain.on("config-save", async (_, data) => {
     }
 
     try {
+        accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version, name, UUID);
+
         db.write({ ...data, isConfigured: true, doDisplayStatus: true });
 
         moveToTray();
@@ -184,32 +189,22 @@ ipcMain.on("config-save", async (_, data) => {
 
 function getToken(username, password, serverAddress, port, protocol, deviceVersion, deviceName, deviceId) {
     return new Promise((resolve, reject) => {
-        const dbData = db.data();
-        const ct = new Date().getTime();
+        request.post(`${protocol}://${serverAddress}:${port}/emby/Users/AuthenticateByName`, {
+                headers: {
+                    Authorization: `Emby Client=Other, Device=${deviceName}, DeviceId=${deviceId}, Version=${deviceVersion}`
+                },
+                body: {
+                    "Username": username,
+                    "Pw": password
+                },
+                json: true
+            }, (err, res, body) => {
+                if(err) return reject(err);
+                if(res.statusCode !== 200) return reject(`Failed to authenticate. Status: ${res.statusCode}. Reason: ${body}`);
 
-        if(dbData.authToken && dbData.authToken.exp > ct) {
-            resolve(dbData.authToken.token);
-        } else {
-                request.post(`${protocol}://${serverAddress}:${port}/emby/Users/AuthenticateByName`, {
-                        headers: {
-                            Authorization: `Emby Client=Other, Device=${deviceName}, DeviceId=${deviceId}, Version=${deviceVersion}`
-                        },
-                        body: {
-                            "Username": username,
-                            "Pw": password
-                        },
-                        json: true
-                    }, (err, res, body) => {
-                        if(err) return reject(err);
-                        if(res.statusCode !== 200) return reject(`Failed to authenticate. Status: ${res.statusCode}. Reason: ${body}`);
-        
-                        const token = body.AccessToken;
-
-                        db.write({ authToken: { token, exp: ct + 604800 } });
-                        resolve(token);
-                    });
-        }
-    });
+                resolve(body.AccessToken);
+            });
+    })
 }
 
 function connectRPC() {
@@ -237,7 +232,7 @@ function connectRPC() {
 async function setPresence() {
     const data = db.data();
 
-    const accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version, name, UUID)
+    if(!accessToken) accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version, name, UUID)
         .catch(err => logger.log(err));
 
     request(`${data.protocol}://${data.serverAddress}:${data.port}/emby/Sessions`, {
