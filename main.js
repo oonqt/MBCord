@@ -32,7 +32,7 @@ async function startApp() {
         title: `Configure ${name}`
     });
 
-    setTimeout(() => checkUpdates(author, name, homepage, version), 2500);
+    setTimeout(checkUpdates, 2500);
 
     const lock = app.requestSingleInstanceLock();
     if(!lock) {
@@ -113,7 +113,7 @@ function moveToTray() {
         }
     ]);
 
-    tray.setToolTip(name);
+    tray.setToolTip(`${name} - ${version}`);
     tray.setContextMenu(contextMenu);
 
     mainWindow.setSkipTaskbar(true); // hide for windows specifically
@@ -325,7 +325,7 @@ async function setPresence() {
     });
 }
 
-function checkUpdates(author, name, homepage, version) {
+function checkUpdates() {
     request(`https://api.github.com/repos/${author}/${name}/releases/latest`, 
         {
             headers: {
