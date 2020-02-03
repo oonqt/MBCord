@@ -11,7 +11,9 @@
     "build:win64": "electron-packager . MBCord --out=build --overwrite --asar --icon=icons/win/icon.ico --platform=win32 --arch=x64",
     "build:linux64": "electron-packager . MBCord --out=build --overwrite --asar --icon=icons/win/icon.ico --platform=linux --arch=x64",
     "build:linux32": "electron-packager . MBCord --out=build --overwrite --asar --icon=icons/win/icon.ico --platform=linux --arch=ia32",
-    "build:win32": "electron-packager . MBCord --out=build --overwrite --asar --icon=icons/win/icon.ico --platform=win32 --arch=ia32"
+    "build:win32": "electron-packager . MBCord --out=build --overwrite --asar --icon=icons/win/icon.ico --platform=win32 --arch=ia32",
+    "build:armv7l": "electron-packager . MBCord --out=build --overwrite --asar --icon=icons/win/icon.ico --platform=linux --arch=armv7l",
+    "build:arm64": "electron-packager . MBCord --out=build --overwrite --asar --icon=icons/win/icon.ico --platform=linux --arch=arm64"
   },
   "author": "oonqt",
   "license": "MIT",
