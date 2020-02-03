@@ -5,9 +5,9 @@ const JsonDB = require("./utils/JsonDB");
 const request = require("request");
 const DiscordRPC = require("discord-rpc");
 const Logger = require("./utils/logger");
-const { toZero, createDeviceId } = require("./utils/utils");
+const { toZero } = require("./utils/utils");
 const { version, name, author, homepage } = require("./package.json");
-const { clientIds, UUID } = require("./config/default.json");
+const { clientIds, UUID, iconUrl } = require("./config/default.json");
 
 const logger = new Logger((process.defaultApp ? "console" : "file"), app.getPath("userData"));
 const db = new JsonDB(path.join(app.getPath("userData"), "config.json"));
@@ -175,7 +175,7 @@ ipcMain.on("config-save", async (_, data) => {
     }
 
     try {
-        accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version, name, UUID);
+        accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version, name, UUID, iconUrl);
 
         db.write({ ...data, isConfigured: true, doDisplayStatus: true });
 
@@ -187,7 +187,7 @@ ipcMain.on("config-save", async (_, data) => {
     }
 });
 
-function getToken(username, password, serverAddress, port, protocol, deviceVersion, deviceName, deviceId) {
+function getToken(username, password, serverAddress, port, protocol, deviceVersion, deviceName, deviceId, IconUrl) {
     return new Promise((resolve, reject) => {
         request.post(`${protocol}://${serverAddress}:${port}/emby/Users/AuthenticateByName`, {
                 headers: {
@@ -201,6 +201,20 @@ function getToken(username, password, serverAddress, port, protocol, deviceVersi
             }, (err, res, body) => {
                 if(err) return reject(err);
                 if(res.statusCode !== 200) return reject(`Failed to authenticate. Status: ${res.statusCode}. Reason: ${body}`);
+
+                // set device icon
+                request.post(`${protocol}://${serverAddress}:${port}/emby/Sessions/Capabilities/Full`, {
+                    headers: {
+                        "X-Emby-Token": body.AccessToken
+                    },
+                    body: {
+                        IconUrl
+                    },
+                    json: true
+                }, (err, res) => {
+                    if(err) return logger.log(`Failed to set device icon: ${err}`);
+                    if(res.statusCode !== 200 && res.statusCode !== 204) return logger.log(`Failed to set device icon. Status: ${res.statusCode}`);
+                });
 
                 resolve(body.AccessToken);
             });
@@ -232,7 +246,7 @@ function connectRPC() {
 async function setPresence() {
     const data = db.data();
 
-    if(!accessToken) accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version, name, UUID)
+    if(!accessToken) accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version, name, UUID, iconUrl)
         .catch(err => logger.log(err));
 
     request(`${data.protocol}://${data.serverAddress}:${data.port}/emby/Sessions`, {
