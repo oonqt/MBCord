@@ -54,8 +54,8 @@
     <script src="js/configure.js"></script>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var elems = document.querySelectorAll('select');
+        document.addEventListener('DOMContentLoaded', () => {
+            const elems = document.querySelectorAll('select');
             M.FormSelect.init(elems);
         });
     </script>
