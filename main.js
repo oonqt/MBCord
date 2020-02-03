@@ -189,22 +189,32 @@ ipcMain.on("config-save", async (_, data) => {
 
 function getToken(username, password, serverAddress, port, protocol, deviceVersion, deviceName, deviceId) {
     return new Promise((resolve, reject) => {
-        request.post(`${protocol}://${serverAddress}:${port}/emby/Users/AuthenticateByName`, {
-                headers: {
-                    Authorization: `Emby Client=Other, Device=${deviceName}, DeviceId=${deviceId}, Version=${deviceVersion}`
-                },
-                body: {
-                    "Username": username,
-                    "Pw": password
-                },
-                json: true
-            }, (err, res, body) => {
-                if(err) return reject(err);
-                if(res.statusCode !== 200) return reject(`Failed to authenticate. Status: ${res.statusCode}. Reason: ${body}`);
+        const dbData = db.data();
+        const ct = new Date().getTime();
 
-                resolve(body.AccessToken);
-            });
-    })
+        if(dbData.authToken && dbData.authToken.exp > ct) {
+            resolve(dbData.authToken.token)
+        } else {
+                request.post(`${protocol}://${serverAddress}:${port}/emby/Users/AuthenticateByName`, {
+                        headers: {
+                            Authorization: `Emby Client=Other, Device=${deviceName}, DeviceId=${deviceId}, Version=${deviceVersion}`
+                        },
+                        body: {
+                            "Username": username,
+                            "Pw": password
+                        },
+                        json: true
+                    }, (err, res, body) => {
+                        if(err) return reject(err);
+                        if(res.statusCode !== 200) return reject(`Failed to authenticate. Status: ${res.statusCode}. Reason: ${body}`);
+        
+                        const token = body.AccessToken;
+
+                        db.write({ authToken: { token, exp: ct + 604800 } });
+                        resolve(token);
+                    });
+        }
+    });
 }
 
 function connectRPC() {
