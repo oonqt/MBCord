@@ -5,34 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     
-    <link rel="stylesheet" href="../node_modules/material-icons/iconfont/material-icons.css">
-    <link rel="stylesheet" href="../node_modules/material-design-lite/material.min.css">
-    <link rel="stylesheet" href="../node_modules/mdl-selectfield/dist/mdl-selectfield.min.js">
+    <link rel="stylesheet" href="css/materialize.min.css">
     <link rel="stylesheet" href="css/configure.css">
 </head>
 <body>
     <div class="container">
-        <h5>Let's get you set up</h5>
+        <h5 class="title">Let's get you set up</h5>
 
         <form id="configuration">
-            <div class="mdl-grid">
-                <div class="mdl-cell--3-col">
-                    
-                </div>
-                <div class="mdl-cell--6-col">
-
-                </div>
-                <div class="mdl-cell--3-col"></div>
-            </div>
-            <!-- <div class="mdl-grid">
-
-            </div>
-            <div class="mdl-grid">
-
-            </div> -->
-        </form>
-
-        <!-- <form id="configuration">
             <div class="row">
                 <div class="input-field col s3">
                     <select id="protocol">
@@ -65,12 +45,19 @@
                     <button class="btn waves-effect waves-light" type="submit">Save</button>
                 </div>
             </div>
-        </form> -->
+        </form>
 
-        <!-- <span id="serverType"></span> -->
+        <span id="serverType"></span>
     </div>
 
-    <script src="../node_modules/material-design-lite/material.min.js"></script>
+    <script src="js/materialize.min.js"></script>
     <script src="js/configure.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const elems = document.querySelectorAll('select');
+            M.FormSelect.init(elems);
+        });
+    </script>
 </body>
 </html>
