@@ -144,23 +144,35 @@ function toggleDisplay() {
     return;
 }
 
+// async function loadAppearancePage() {
+//     await loadPage(path.join(__dirname, "static", "appearance.html"));
+// }
+
 async function resetApp() {
     db.write({ isConfigured: false });
 
     accessToken = null;
 
-    if(statusUpdate) clearInterval(statusUpdate); // check
+    if(statusUpdate) clearInterval(statusUpdate);
 
-    if(rpc) rpc.clearActivity(); // check
+    if(rpc) rpc.clearActivity();
     
-    await mainWindow.loadFile(path.join(__dirname, "static", "configure.html"));
-    mainWindow.show();
-    mainWindow.setSkipTaskbar(false);
+    await loadPage(path.join(__dirname, "static", "configure.html"));
+
     mainWindow.webContents.send("config-type", db.data().serverType);
 
-    if(process.platform === "darwin") app.dock.show();
-
     tray.destroy();
+}
+
+function loadPage(path) {
+    return new Promise(async resolve => {
+        await mainWindow.loadFile(path);
+        mainWindow.show();
+        mainWindow.setSkipTaskbar(false);
+        if(process.platform === "darwin") app.dock.show();
+
+        resolve();
+    });
 }
 
 ipcMain.on("config-save", async (_, data) => {
