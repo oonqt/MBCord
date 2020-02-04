@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "discord-rpc": "^3.0.2",
+    "materialize": "^1.0.0",
     "request": "^2.88.0",
     "ws": "^7.2.1"
   },
