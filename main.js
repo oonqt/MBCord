@@ -1,4 +1,5 @@
 const path = require("path");
+const ws = require("ws");
 const { app, BrowserWindow, ipcMain, Tray, Menu, shell, dialog } = require("electron");
 const Startup = require("./utils/startupHandler");
 const JsonDB = require("./utils/JsonDB");
