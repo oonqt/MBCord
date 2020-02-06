@@ -1,5 +1,4 @@
 const path = require("path");
-const ws = require("ws");
 const { app, BrowserWindow, ipcMain, Tray, Menu, shell, dialog } = require("electron");
 const Startup = require("./utils/startupHandler");
 const JsonDB = require("./utils/JsonDB");
@@ -50,7 +49,7 @@ async function startApp() {
     }
 
     if(db.data().isConfigured === true) {
-        if(!db.data().doDisplayStatus) db.write({ doDisplayStatus: true }); // for existing installations that do not have doDisplayStatus in their config. This could be removed in future releases.
+        if(db.data().doDisplayStatus === undefined) db.write({ doDisplayStatus: true }); // for existing installations that do not have doDisplayStatus in their config. This could be removed in future releases.
         moveToTray();
         connectRPC();
     } else {
