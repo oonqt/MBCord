@@ -286,7 +286,7 @@ async function setPresence() {
                 switch(NPItem.Type) {
                     case "Episode":
                         rpc.setActivity({
-                            details: `Watching ${NPItem.SeriesName ? NPItem.SeriesName : "a TV Show"}`,
+                            details: NPItem.SeriesName,
                             state: NPItem.ParentIndexNumber && NPItem.IndexNumber ? `S${toZero(NPItem.ParentIndexNumber)}E${toZero(NPItem.IndexNumber)}: ${NPItem.Name}` : NPItem.Name,
                             largeImageKey: "large",
                             largeImageText: `Watching on ${session.Client}`,
