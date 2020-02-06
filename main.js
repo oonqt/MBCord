@@ -281,7 +281,7 @@ async function setPresence() {
                 const endTimestamp = Math.round((currentEpochSeconds + Math.round(((NPItem.RunTimeTicks - session.PlayState.PositionTicks) / 10000) / 1000)));
                 const endsIn = Math.round(calcEndTimestamp(session, currentEpochSeconds) - currentEpochSeconds);
                 
-                setTimeout(setPresence, endsIn * 1000);
+                setTimeout(setPresence, (endsIn * 1000) + 2500); // add 2.5 extra second because playback doesnt always start instnatly
 
                 switch(NPItem.Type) {
                     case "Episode":
@@ -334,6 +334,8 @@ async function setPresence() {
                 }   
         } else {
             if(rpc) rpc.clearActivity();
+            logger.log("rap about it wanna talk about it");
+            setTimeout(setPresence, 2500); // check for status updates more frequently
         }
     });
 }
@@ -353,11 +355,11 @@ function checkUpdates() {
         if(body.tag_name !== version) {
             dialog.showMessageBox({
                 type: "info",
-                buttons: ["Get Latest Version"],
+                buttons: ["Maybe Later", "Get Latest Version"],
                 message: "A new version is available!",
-                detail: `Your version is ${version}. The latest version is currently ${body.tag_name}`
+                detail: `Your version is ${version}. The latest version is ${body.tag_name}. Would you like to download it?`
             }, index => {
-                if(index === 0) {
+                if(index === 1) {
                     shell.openExternal(`${homepage}/releases/latest`);
                 }
             });
