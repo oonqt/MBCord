@@ -9,7 +9,8 @@ const { toZero } = require("./utils/utils");
 const { version, name, author, homepage } = require("./package.json");
 const { clientIds, UUID, iconUrl } = require("./config/default.json");
 
-const logger = new Logger((process.defaultApp ? "console" : "file"), app.getPath("userData"));
+const logger = new Logger(("file"), app.getPath("userData"));
+// const logger = new Logger((process.defaultApp ? "console" : "file"), app.getPath("userData"));
 const db = new JsonDB(path.join(app.getPath("userData"), "config.json"));
 const startupHandler = new Startup(app);
 

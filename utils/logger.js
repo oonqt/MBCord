@@ -23,9 +23,9 @@ class Logger {
             }
 
             if(!fs.existsSync(this.file)) {
-                fs.writeFileSync(this.file, `[${Date.toLocaleString()}]: ${message}\n`);
+                fs.writeFileSync(this.file, `[${Date().toLocaleString()}]: ${message}\n`);
             } else {
-                fs.appendFileSync(this.file, `[${Date.toLocaleString()}]: ${message}\n`);
+                fs.appendFileSync(this.file, `[${Date().toLocaleString()}]: ${message}\n`);
             }
         }
     }
