@@ -353,11 +353,11 @@ function checkUpdates() {
         if(body.tag_name !== version) {
             dialog.showMessageBox({
                 type: "info",
-                buttons: ["Okay", "Get Latest Version"],
+                buttons: ["Get Latest Version"],
                 message: "A new version is available!",
                 detail: `Your version is ${version}. The latest version is currently ${body.tag_name}`
             }, index => {
-                if(index === 1) {
+                if(index === 0) {
                     shell.openExternal(`${homepage}/releases/latest`);
                 }
             });
