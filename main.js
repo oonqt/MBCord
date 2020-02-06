@@ -276,61 +276,62 @@ async function setPresence() {
             session.NowPlayingItem)[0];
             
             if(session) {
-            const currentEpochSeconds = new Date().getTime() / 1000; 
-            const endTimestamp = Math.round((currentEpochSeconds + Math.round(((session.NowPlayingItem.RunTimeTicks - session.PlayState.PositionTicks) / 10000) / 1000)));
-            const endsIn = Math.round(calcEndTimestamp(session, currentEpochSeconds) - currentEpochSeconds);
-            
-            setTimeout(setPresence, endsIn * 1000);
+                const currentEpochSeconds = new Date().getTime() / 1000; 
+                const NPItem = session.NowPlayingItem;
+                const endTimestamp = Math.round((currentEpochSeconds + Math.round(((NPItem.RunTimeTicks - session.PlayState.PositionTicks) / 10000) / 1000)));
+                const endsIn = Math.round(calcEndTimestamp(session, currentEpochSeconds) - currentEpochSeconds);
+                
+                setTimeout(setPresence, endsIn * 1000);
 
-            switch(session.NowPlayingItem.Type) {
-                case "Episode":
-                    rpc.setActivity({
-                        details: `Watching ${session.NowPlayingItem.SeriesName}`,
-                        state: `S${toZero(session.NowPlayingItem.ParentIndexNumber)}E${toZero(session.NowPlayingItem.IndexNumber)}: ${session.NowPlayingItem.Name}`,
-                        largeImageKey: "large",
-                        largeImageText: `Watching on ${session.Client}`,
-                        smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
-                        smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-                        instance: false,
-                        endTimestamp: !session.PlayState.IsPaused && endTimestamp
-                    });
-                    break;
-                case "Movie":
-                    rpc.setActivity({
-                        details: "Watching a Movie",
-                        state: session.NowPlayingItem.Name,
-                        largeImageKey: "large",
-                        largeImageText: `Watching on ${session.Client}`,
-                        smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
-                        smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-                        instance: false,
-                        endTimestamp: !session.PlayState.IsPaused && endTimestamp
-                    });
-                    break;
-                case "Audio": 
-                    rpc.setActivity({
-                        details: `Listening to ${session.NowPlayingItem.Name}`,
-                        state: `By ${session.NowPlayingItem.AlbumArtist}`,
-                        largeImageKey: "large",
-                        largeImageText: `Listening on ${session.Client}`,
-                        smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
-                        smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-                        instance: false,
-                        endTimestamp: !session.PlayState.IsPaused && endTimestamp
-                    });
-                    break;
-                default: 
-                    rpc.setActivity({
-                        details: "Watching Other Content",
-                        state: session.NowPlayingItem.Name,
-                        largeImageKey: "large",
-                        largeImageText: `Watching on ${session.Client}`,
-                        smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
-                        smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-                        instance: false,
-                        endTimestamp: !session.PlayState.IsPaused && endTimestamp
-                    });
-            }   
+                switch(NPItem.Type) {
+                    case "Episode":
+                        rpc.setActivity({
+                            details: `Watching ${NPItem.SeriesName ? NPItem.SeriesName : "a TV Show"}`,
+                            state: NPItem.ParentIndexNumber && NPItem.IndexNumber ? `S${toZero(NPItem.ParentIndexNumber)}E${toZero(NPItem.IndexNumber)}: ${NPItem.Name}` : NPItem.Name,
+                            largeImageKey: "large",
+                            largeImageText: `Watching on ${session.Client}`,
+                            smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
+                            smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                            instance: false,
+                            endTimestamp: !session.PlayState.IsPaused && endTimestamp
+                        });
+                        break;
+                    case "Movie":
+                        rpc.setActivity({
+                            details: "Watching a Movie",
+                            state: NPItem.Name,
+                            largeImageKey: "large",
+                            largeImageText: `Watching on ${session.Client}`,
+                            smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
+                            smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                            instance: false,
+                            endTimestamp: !session.PlayState.IsPaused && endTimestamp
+                        });
+                        break;
+                    case "Audio": 
+                        rpc.setActivity({
+                            details: `Listening to ${NPItem.Name}`,
+                            state: NPItem.AlbumArtist && `By ${NPItem.AlbumArtist}`,
+                            largeImageKey: "large",
+                            largeImageText: `Listening on ${session.Client}`,
+                            smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
+                            smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                            instance: false,
+                            endTimestamp: !session.PlayState.IsPaused && endTimestamp
+                        });
+                        break;
+                    default: 
+                        rpc.setActivity({
+                            details: "Watching Other Content",
+                            state: NPItem.Name,
+                            largeImageKey: "large",
+                            largeImageText: `Watching on ${session.Client}`,
+                            smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
+                            smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                            instance: false,
+                            endTimestamp: !session.PlayState.IsPaused && endTimestamp
+                        });
+                }   
         } else {
             if(rpc) rpc.clearActivity();
         }
