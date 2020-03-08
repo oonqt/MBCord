@@ -135,7 +135,7 @@ function toggleDisplay() {
     if(doDisplay) {
         db.write({ doDisplayStatus: false });
         rpc.clearActivity();
-        if(wsconn) wsconn.close();
+        if(wsconn) wsconn = null;
     } else {
         db.write({ doDisplayStatus: true });
 
@@ -226,7 +226,12 @@ function connectRPC() {
         rpc = new DiscordRPC.Client({ transport: "ipc" });
         rpc.login({ clientId: clientIds[db.data().serverType] })
             .then(async () => {
-                if(!accessToken) accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version, name, UUID, iconUrl); 
+                if(!accessToken) accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version, name, UUID, iconUrl)
+                    .catch(err => {
+                        logger.log(err);
+                        return setTimeout(connectRPC, 15000);
+                    });
+
                 wsconn = new ws(`${data.protocol === "http" ? "ws" : "wss"}://${data.serverAddress}:${data.port}?api_key=${accessToken}&deviceId=${UUID}`)
             
                 setPresence(); // initial status (get playback that might already be playing)
@@ -239,14 +244,14 @@ function connectRPC() {
                     }
                 });
 
-                wsconn.once("open", () => {
+                wsconn.on("open", () => {
                     logger.log("Websocket connection opened");
                     wsconn.send(JSON.stringify({ MessageType: "SessionsStart", Data: "0,1500,900" })); // "subscribe" to more session events
                 });
 
-                wsconn.once("close", () => {
+                wsconn.on("close", () => {
                     logger.log("Websocket closed, attempting to reopen connection");
-                    setTimeout(connectRPC, 5000);
+                    setTimeout(connectRPC, 15000);
                 });
             })
             .catch(() => {
