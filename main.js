@@ -1,9 +1,10 @@
 const path = require("path");
 const { app, BrowserWindow, ipcMain, Tray, Menu, shell, dialog } = require("electron");
+const DiscordRPC = require("discord-rpc");
+const request = require("request");
+const ws = require("ws");
 const Startup = require("./utils/startupHandler");
 const JsonDB = require("./utils/JsonDB");
-const request = require("request");
-const DiscordRPC = require("discord-rpc");
 const Logger = require("./utils/logger");
 const { toZero } = require("./utils/utils");
 const { version, name, author, homepage } = require("./package.json");
@@ -17,7 +18,7 @@ let rpc;
 let mainWindow;
 let tray;
 let accessToken;
-let statusUpdate;
+let wsconn;
 
 async function startApp() {
     mainWindow = new BrowserWindow({
@@ -134,7 +135,7 @@ function toggleDisplay() {
     if(doDisplay) {
         db.write({ doDisplayStatus: false });
         rpc.clearActivity();
-        clearInterval(statusUpdate);
+        if(wsconn) wsconn.close();
     } else {
         db.write({ doDisplayStatus: true });
 
@@ -144,35 +145,20 @@ function toggleDisplay() {
     return;
 }
 
-// async function loadAppearancePage() {
-//     await loadPage(path.join(__dirname, "static", "appearance.html"));
-// }
-
 async function resetApp() {
     db.write({ isConfigured: false });
 
     accessToken = null;
 
-    if(statusUpdate) clearInterval(statusUpdate);
+    if(wsconn) wsconn.close();
 
     if(rpc) rpc.clearActivity();
     
-    await loadPage(path.join(__dirname, "static", "configure.html"));
+    await mainWindow.loadFile(path.join(__dirname, "static", "configure.html"));
 
     mainWindow.webContents.send("config-type", db.data().serverType);
 
     tray.destroy();
-}
-
-function loadPage(path) {
-    return new Promise(async resolve => {
-        await mainWindow.loadFile(path);
-        mainWindow.show();
-        mainWindow.setSkipTaskbar(false);
-        if(process.platform === "darwin") app.dock.show();
-
-        resolve();
-    });
 }
 
 ipcMain.on("config-save", async (_, data) => {
@@ -234,13 +220,30 @@ function getToken(username, password, serverAddress, port, protocol, deviceVersi
 }
 
 function connectRPC() {
-    if(db.data().isConfigured && db.data().doDisplayStatus) {
+    const data = db.data();
+
+    if(data.isConfigured && data.doDisplayStatus) {
         rpc = new DiscordRPC.Client({ transport: "ipc" });
         rpc.login({ clientId: clientIds[db.data().serverType] })
-            .then(() => {
-                setPresence();
+            .then(async () => {
+                if(!accessToken) accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version, name, UUID, iconUrl); 
+                wsconn = new ws(`${data.protocol === "http" ? "ws" : "wss"}://${data.serverAddress}:${data.port}?api_key=${accessToken}&deviceId=${UUID}`)
+            
+                wsconn.on("message", wsData => {
+                    wsData = JSON.parse(wsData);
 
-                statusUpdate = setInterval(setPresence, 15000);
+                    if(wsData.MessageType = "UserDataChanged") {
+                        setPresence();
+                    }
+                });
+
+                wsconn.once("open", () => {
+                    logger.log("Websocket opened");
+                });
+
+                wsconn.once("close", () => {
+                    logger.log("Websocket closed");
+                });
             })
             .catch(() => {
                 logger.log("Failed to connect to discord. Attempting to reconnect");
@@ -248,7 +251,7 @@ function connectRPC() {
             });
 
         rpc.transport.once("close", () => {
-            clearInterval(statusUpdate);
+            if(wsconn) wsconn.close();
             connectRPC();
             logger.log("Discord RPC connection terminated. Attempting to reconnect.");
         });
@@ -334,7 +337,6 @@ async function setPresence() {
                 }   
         } else {
             if(rpc) rpc.clearActivity();
-            logger.log("rap about it wanna talk about it");
             setTimeout(setPresence, 2500); // check for status updates more frequently
         }
     });
