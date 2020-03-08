@@ -229,26 +229,33 @@ function connectRPC() {
                 if(!accessToken) accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version, name, UUID, iconUrl); 
                 wsconn = new ws(`${data.protocol === "http" ? "ws" : "wss"}://${data.serverAddress}:${data.port}?api_key=${accessToken}&deviceId=${UUID}`)
             
+                setPresence(); // initial status (get playback that might already be playing)
+
                 wsconn.on("message", wsData => {
                     wsData = JSON.parse(wsData);
 
-                    if(wsData.MessageType = "UserDataChanged") {
+                    if(wsData.MessageType === "Sessions" || wsData.MessageType === "UserDataChanged") {
                         setPresence();
                     }
                 });
 
                 wsconn.once("open", () => {
-                    logger.log("Websocket opened");
+                    logger.log("Websocket connection opened");
+                    wsconn.send(JSON.stringify({ MessageType: "SessionsStart", Data: "0,1500,900" })); // "subscribe" to more session events
                 });
 
                 wsconn.once("close", () => {
-                    logger.log("Websocket closed");
+                    logger.log("Websocket closed, attempting to reopen connection");
+                    setTimeout(connectRPC, 5000);
                 });
             })
             .catch(() => {
-                logger.log("Failed to connect to discord. Attempting to reconnect");
                 setTimeout(connectRPC, 15000);
             });
+
+        rpc.transport.once("open", () => {
+            logger.log("Discord RPC connection established")
+        });
 
         rpc.transport.once("close", () => {
             if(wsconn) wsconn.close();
@@ -282,10 +289,7 @@ async function setPresence() {
                 const currentEpochSeconds = new Date().getTime() / 1000; 
                 const NPItem = session.NowPlayingItem;
                 const endTimestamp = Math.round((currentEpochSeconds + Math.round(((NPItem.RunTimeTicks - session.PlayState.PositionTicks) / 10000) / 1000)));
-                const endsIn = Math.round(calcEndTimestamp(session, currentEpochSeconds) - currentEpochSeconds);
                 
-                setTimeout(setPresence, (endsIn * 1000) + 2500); // add 2.5 extra second because playback doesnt always start instnatly
-
                 switch(NPItem.Type) {
                     case "Episode":
                         rpc.setActivity({
@@ -337,7 +341,6 @@ async function setPresence() {
                 }   
         } else {
             if(rpc) rpc.clearActivity();
-            setTimeout(setPresence, 2500); // check for status updates more frequently
         }
     });
 }
@@ -367,10 +370,6 @@ function checkUpdates() {
             });
         }
     });
-}
-
-function calcEndTimestamp(session, currentEpochSeconds) {
-    return Math.round((currentEpochSeconds + Math.round(((session.NowPlayingItem.RunTimeTicks - session.PlayState.PositionTicks) / 10000) / 1000)));
 }
 
 app.on("ready", () => startApp());
