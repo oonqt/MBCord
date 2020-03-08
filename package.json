@@ -1,6 +1,6 @@
 {
   "name": "MBCord",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "An Emby/Jellyfin rich presence client for Discord",
   "main": "main.js",
   "scripts": {
@@ -25,7 +25,8 @@
   "dependencies": {
     "discord-rpc": "^3.0.2",
     "materialize-css": "^1.0.0",
-    "request": "^2.88.0"
+    "request": "^2.88.0",
+    "ws": "^7.2.1"
   },
   "homepage": "https://github.com/oonqt/MBCord"
 }
