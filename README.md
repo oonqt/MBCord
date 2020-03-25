@@ -11,5 +11,7 @@
 
 - To access additional features such as resetting configuration, running at startup and more, you can simply right click the tray icon (MBCord must be configured to access the tray icon)
 
+## NOTICE: Discord pushed an update that results in an RPC error code of 1000, until I track down what went wrong, all releases starting from 1.0.0 to 1.1.1 are completely broken and will not change your status on Discord
+
 ![Jellyfin](https://i.memester.xyz/u/i0o.png)
 ![Emby](https://i.memester.xyz/u/0ik.png)
