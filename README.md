@@ -1,6 +1,6 @@
 # MBCord
 
-[![N|Solid](https://i.memester.cf/u/jbr.png)](https://electronjs.org/)
+[![N|Solid](https://i.memester.xyz/u/jbr.png)](https://electronjs.org/)
 
 ## MBCord is an open-source Discord rich presence client for the [Emby](https://emby.media/)/[Jellyfin](https://jellyfin.org) media server
 
@@ -11,5 +11,5 @@
 
 - To access additional features such as resetting configuration, running at startup and more, you can simply right click the tray icon (MBCord must be configured to access the tray icon)
 
-![Jellyfin](https://i.memester.cf/u/i0o.png)
-![Emby](https://i.memester.cf/u/0ik.png)
+![Jellyfin](https://i.memester.xyz/u/i0o.png)
+![Emby](https://i.memester.xyz/u/0ik.png)
