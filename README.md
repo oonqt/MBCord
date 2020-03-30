@@ -16,4 +16,4 @@
 ![Jellyfin](https://i.memester.xyz/u/i0o.png)
 ![Emby](https://i.memester.xyz/u/0ik.png)
 
-PVTD confirmation
+PVTD confirmation (from doc you meant shredder)
