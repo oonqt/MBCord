@@ -1,10 +1,9 @@
 const path = require("path");
 const { app, BrowserWindow, ipcMain, Tray, Menu, shell, dialog } = require("electron");
-const DiscordRPC = require("discord-rpc");
-const request = require("request");
-const ws = require("ws");
 const Startup = require("./utils/startupHandler");
 const JsonDB = require("./utils/JsonDB");
+const request = require("request");
+const DiscordRPC = require("discord-rpc");
 const Logger = require("./utils/logger");
 const { toZero } = require("./utils/utils");
 const { version, name, author, homepage } = require("./package.json");
@@ -18,7 +17,7 @@ let rpc;
 let mainWindow;
 let tray;
 let accessToken;
-let wsconn;
+let statusUpdate;
 
 async function startApp() {
     mainWindow = new BrowserWindow({
@@ -50,7 +49,7 @@ async function startApp() {
     }
 
     if(db.data().isConfigured === true) {
-        if(db.data().doDisplayStatus === undefined) db.write({ doDisplayStatus: true }); // for existing installations that do not have doDisplayStatus in their config. This could be removed in future releases.
+        if(!db.data().doDisplayStatus) db.write({ doDisplayStatus: true }); // for existing installations that do not have doDisplayStatus in their config. This could be removed in future releases.
         moveToTray();
         connectRPC();
     } else {
@@ -114,7 +113,7 @@ function moveToTray() {
         }
     ]);
 
-    tray.setToolTip(`${name} - ${version}`);
+    tray.setToolTip(name);
     tray.setContextMenu(contextMenu);
 
     mainWindow.setSkipTaskbar(true); // hide for windows specifically
@@ -135,7 +134,7 @@ function toggleDisplay() {
     if(doDisplay) {
         db.write({ doDisplayStatus: false });
         rpc.clearActivity();
-        if(wsconn) wsconn = null;
+        clearInterval(statusUpdate);
     } else {
         db.write({ doDisplayStatus: true });
 
@@ -150,13 +149,16 @@ async function resetApp() {
 
     accessToken = null;
 
-    if(wsconn) wsconn.close();
+    if(statusUpdate) clearInterval(statusUpdate); // check
 
-    if(rpc) rpc.clearActivity();
+    if(rpc) rpc.clearActivity(); // check
     
     await mainWindow.loadFile(path.join(__dirname, "static", "configure.html"));
-
+    mainWindow.show();
+    mainWindow.setSkipTaskbar(false);
     mainWindow.webContents.send("config-type", db.data().serverType);
+
+    if(process.platform === "darwin") app.dock.show();
 
     tray.destroy();
 }
@@ -220,50 +222,21 @@ function getToken(username, password, serverAddress, port, protocol, deviceVersi
 }
 
 function connectRPC() {
-    const data = db.data();
-
-    if(data.isConfigured && data.doDisplayStatus) {
+    if(db.data().isConfigured && db.data().doDisplayStatus) {
         rpc = new DiscordRPC.Client({ transport: "ipc" });
         rpc.login({ clientId: clientIds[db.data().serverType] })
-            .then(async () => {
-                if(!accessToken) accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version, name, UUID, iconUrl)
-                    .catch(err => {
-                        logger.log(err);
-                        return setTimeout(connectRPC, 15000);
-                    });
+            .then(() => {
+                setPresence();
 
-                wsconn = new ws(`${data.protocol === "http" ? "ws" : "wss"}://${data.serverAddress}:${data.port}?api_key=${accessToken}&deviceId=${UUID}`)
-            
-                setPresence(); // initial status (get playback that might already be playing)
-
-                wsconn.on("message", wsData => {
-                    wsData = JSON.parse(wsData);
-
-                    if(wsData.MessageType === "Sessions" || wsData.MessageType === "UserDataChanged") {
-                        setPresence();
-                    }
-                });
-
-                wsconn.on("open", () => {
-                    logger.log("Websocket connection opened");
-                    wsconn.send(JSON.stringify({ MessageType: "SessionsStart", Data: "0,1500,900" })); // "subscribe" to more session events
-                });
-
-                wsconn.on("close", () => {
-                    logger.log("Websocket closed, attempting to reopen connection");
-                    setTimeout(connectRPC, 15000);
-                });
+                statusUpdate = setInterval(setPresence, 15000);
             })
             .catch(() => {
+                logger.log("Failed to connect to discord. Attempting to reconnect");
                 setTimeout(connectRPC, 15000);
             });
 
-        rpc.transport.once("open", () => {
-            logger.log("Discord RPC connection established")
-        });
-
         rpc.transport.once("close", () => {
-            if(wsconn) wsconn.close();
+            clearInterval(statusUpdate);
             connectRPC();
             logger.log("Discord RPC connection terminated. Attempting to reconnect.");
         });
@@ -291,59 +264,61 @@ async function setPresence() {
             session.NowPlayingItem)[0];
             
             if(session) {
-                const currentEpochSeconds = new Date().getTime() / 1000; 
-                const NPItem = session.NowPlayingItem;
-                const endTimestamp = Math.round((currentEpochSeconds + Math.round(((NPItem.RunTimeTicks - session.PlayState.PositionTicks) / 10000) / 1000)));
-                
-                switch(NPItem.Type) {
-                    case "Episode":
-                        rpc.setActivity({
-                            details: NPItem.SeriesName,
-                            state: NPItem.ParentIndexNumber && NPItem.IndexNumber ? `S${toZero(NPItem.ParentIndexNumber)}E${toZero(NPItem.IndexNumber)}: ${NPItem.Name}` : NPItem.Name,
-                            largeImageKey: "large",
-                            largeImageText: `Watching on ${session.Client}`,
-                            smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
-                            smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-                            instance: false,
-                            endTimestamp: !session.PlayState.IsPaused && endTimestamp
-                        });
-                        break;
-                    case "Movie":
-                        rpc.setActivity({
-                            details: "Watching a Movie",
-                            state: NPItem.Name,
-                            largeImageKey: "large",
-                            largeImageText: `Watching on ${session.Client}`,
-                            smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
-                            smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-                            instance: false,
-                            endTimestamp: !session.PlayState.IsPaused && endTimestamp
-                        });
-                        break;
-                    case "Audio": 
-                        rpc.setActivity({
-                            details: `Listening to ${NPItem.Name}`,
-                            state: NPItem.AlbumArtist && `By ${NPItem.AlbumArtist}`,
-                            largeImageKey: "large",
-                            largeImageText: `Listening on ${session.Client}`,
-                            smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
-                            smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-                            instance: false,
-                            endTimestamp: !session.PlayState.IsPaused && endTimestamp
-                        });
-                        break;
-                    default: 
-                        rpc.setActivity({
-                            details: "Watching Other Content",
-                            state: NPItem.Name,
-                            largeImageKey: "large",
-                            largeImageText: `Watching on ${session.Client}`,
-                            smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
-                            smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-                            instance: false,
-                            endTimestamp: !session.PlayState.IsPaused && endTimestamp
-                        });
-                }   
+            const currentEpochSeconds = new Date().getTime() / 1000; 
+            const endTimestamp = Math.round((currentEpochSeconds + Math.round(((session.NowPlayingItem.RunTimeTicks - session.PlayState.PositionTicks) / 10000) / 1000)));
+            const endsIn = Math.round(calcEndTimestamp(session, currentEpochSeconds) - currentEpochSeconds);
+            
+            setTimeout(setPresence, endsIn * 1000);
+
+            switch(session.NowPlayingItem.Type) {
+                case "Episode":
+                    rpc.setActivity({
+                        details: `Watching ${session.NowPlayingItem.SeriesName}`,
+                        state: `S${toZero(session.NowPlayingItem.ParentIndexNumber)}E${toZero(session.NowPlayingItem.IndexNumber)}: ${session.NowPlayingItem.Name}`,
+                        largeImageKey: "large",
+                        largeImageText: `Watching on ${session.Client}`,
+                        smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
+                        smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                        instance: false,
+                        endTimestamp: !session.PlayState.IsPaused && endTimestamp
+                    });
+                    break;
+                case "Movie":
+                    rpc.setActivity({
+                        details: "Watching a Movie",
+                        state: session.NowPlayingItem.Name,
+                        largeImageKey: "large",
+                        largeImageText: `Watching on ${session.Client}`,
+                        smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
+                        smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                        instance: false,
+                        endTimestamp: !session.PlayState.IsPaused && endTimestamp
+                    });
+                    break;
+                case "Audio": 
+                    rpc.setActivity({
+                        details: `Listening to ${session.NowPlayingItem.Name}`,
+                        state: `By ${session.NowPlayingItem.AlbumArtist}`,
+                        largeImageKey: "large",
+                        largeImageText: `Listening on ${session.Client}`,
+                        smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
+                        smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                        instance: false,
+                        endTimestamp: !session.PlayState.IsPaused && endTimestamp
+                    });
+                    break;
+                default: 
+                    rpc.setActivity({
+                        details: "Watching Other Content",
+                        state: session.NowPlayingItem.Name,
+                        largeImageKey: "large",
+                        largeImageText: `Watching on ${session.Client}`,
+                        smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
+                        smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
+                        instance: false,
+                        endTimestamp: !session.PlayState.IsPaused && endTimestamp
+                    });
+            }   
         } else {
             if(rpc) rpc.clearActivity();
         }
@@ -365,9 +340,9 @@ function checkUpdates() {
         if(body.tag_name !== version) {
             dialog.showMessageBox({
                 type: "info",
-                buttons: ["Maybe Later", "Get Latest Version"],
+                buttons: ["Okay", "Get Latest Version"],
                 message: "A new version is available!",
-                detail: `Your version is ${version}. The latest version is ${body.tag_name}. Would you like to download it?`
+                detail: `Your version is ${version}. The latest version is currently ${body.tag_name}`
             }, index => {
                 if(index === 1) {
                     shell.openExternal(`${homepage}/releases/latest`);
@@ -375,6 +350,10 @@ function checkUpdates() {
             });
         }
     });
+}
+
+function calcEndTimestamp(session, currentEpochSeconds) {
+    return Math.round((currentEpochSeconds + Math.round(((session.NowPlayingItem.RunTimeTicks - session.PlayState.PositionTicks) / 10000) / 1000)));
 }
 
 app.on("ready", () => startApp());
