@@ -25,8 +25,7 @@
   "dependencies": {
     "discord-rpc": "^3.0.2",
     "materialize-css": "^1.0.0",
-    "request": "^2.88.0",
-    "ws": "^7.2.1"
+    "request": "^2.88.0"
   },
   "homepage": "https://github.com/oonqt/MBCord"
 }
