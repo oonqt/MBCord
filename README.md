@@ -11,7 +11,7 @@
 
 - To access additional features such as resetting configuration, running at startup and more, you can simply right click the tray icon (MBCord must be configured to access the tray icon)
 
-## NOTICE: MBCord is currently broken due to the old Discord API applications being deleted along with my old account. If you have no clue what that means, just expect a fix in a couple of days. Thanks
+## I am aware of how buggy this is, it will be remade some time in the future
 
 ![Jellyfin](https://i.memester.xyz/u/i0o.png)
 ![Emby](https://i.memester.xyz/u/0ik.png)
