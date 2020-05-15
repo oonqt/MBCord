@@ -11,7 +11,7 @@
 
 - To access additional features such as resetting configuration, running at startup and more, you can simply right click the tray icon (MBCord must be configured to access the tray icon)
 
-## I am aware of how buggy this is, it will be remade some time in the future
+## I am aware of how buggy this is, v2 is under development
 
 ![Jellyfin](https://i.memester.xyz/u/i0o.png)
 ![Emby](https://i.memester.xyz/u/0ik.png)
