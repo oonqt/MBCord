@@ -1,21 +1,36 @@
-const zip = require("node-7z");
+const zip = require("electron-installer-zip");
+const rimraf = require("rimraf");
 const path = require("path");
-const { execSync } = require("child_process");  
 const fs = require("fs");
+const { promisify } = require("util");
+const { execSync } = require("child_process");
+const { prodBuilds } = require("./package.json");
 
-async function main() {
-    console.log("Packaging all platforms...");
+const zipSync = promisify(zip);
 
-    await execSync("npm run packall", { stdio: "ignore" });
+(async () => {
+    console.log("\nPackaging all platforms... \n");
 
-    console.log("Compressing...");
+    for(const build of prodBuilds) {
+        console.log(`Packaging ${build}`)
+        await execSync(`npm run ${build}`, { stdio: "ignore" });
+    }
 
-    let packedBuilds = await fs.readdirSync(path.join(__dirname, "build"));
+    console.log("\nCompressing... \n");
 
-    packedBuilds.forEach(build => {
-        console.log(`Starting: ${build}`)
-        zip.add(path.join("build", `${build}.zip`), path.join("build", build), { deleteFilesAfter: true });
-    });
-}
+    let packedBuilds = fs.readdirSync(path.join(__dirname, "build"));
 
-main();
+    for(const build of packedBuilds) {
+        console.log(`Compressing ${build}`);
+
+        const buildPath = path.join("build", build);
+
+        // problem code
+        await zipSync({
+            dir: buildPath,
+            out: `${buildPath}.zip`
+        });
+
+        await rimraf.sync(buildPath);
+    }
+})();

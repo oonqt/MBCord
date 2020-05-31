@@ -1,21 +1,30 @@
 const fs = require("fs");
 
-// extremely basic implementation of a JSON database system. It does all that it needs to do to get the job done.
-// Have a problem with how shit it is? Go fuck yourself.
-
 class JsonDB {
+    /**
+     * 
+     * @param {string} _dbfile Path to JsonDB file 
+     */
     constructor(_dbfile) {
         this.dbfile = _dbfile
     }
 
+    /**
+     * @returns {object} Data from the database
+     */
     data() {
         if(!fs.existsSync(this.dbfile)) {
-            return {}; // simulate an empty json "file"
+            return new Object();
         } else {
             return JSON.parse(fs.readFileSync(this.dbfile, "utf8"));
         }
     }
 
+    /**
+     * 
+     * @param {object} data Data to write to DB
+     * @returns {void}
+     */
     write(data) {
         fs.writeFileSync(this.dbfile, JSON.stringify({ ...this.data(), ...data }));
     }
