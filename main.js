@@ -109,8 +109,6 @@ const loadConfigurationPage = async () => {
 	await mainWindow.loadFile(path.join(__dirname, 'static', 'configure.html'));
 	mainWindow.webContents.send('config-type', db.data().serverType);
 
-	mainWindow.show();
-
 	appBarHide(false);
 };
 
@@ -168,8 +166,10 @@ const checkForUpdates = (calledFromTray) => {
 
 const appBarHide = (doHide) => {
 	if (doHide) {
+		mainWindow.hide();
 		if (process.platform === 'darwin') app.dock.hide();
 	} else {
+		mainWindow.show();
 		if (process.platform === 'darwin') app.dock.show();
 	}
 
@@ -259,8 +259,6 @@ const moveToTray = () => {
 	tray.setToolTip(name);
 	tray.setContextMenu(contextMenu);
 
-	mainWindow.hide();
-
 	// ignore the promise
 	// we dont care if the user interacts, we just want the app to start
 	dialog.showMessageBox({
@@ -277,7 +275,34 @@ const setLogLevel = (level) => {
 	logger.level = level;
 };
 
-const ignoredLibrariesPrompt = async () => {};
+const ignoredLibrariesPrompt = async () => {
+	await mainWindow.loadFile(
+		path.join(__dirname, 'static', 'libraryConfiguration.html')
+	);
+
+	// set height/width
+
+	let userViews;
+
+	try {
+		userViews = await mbc.getUserViews();
+	} catch (err) {
+		dialog.showErrorBox(name, "Failed to fetch libraries for your user");
+		logger.error(err);
+		return;
+	}
+
+	mainWindow.webContents.send('config-type', db.data().serverType);
+	mainWindow.webContents.send('receive-views', userViews);
+
+	appBarHide(false);
+};
+
+ipcMain.on('view-save', (_, data) => {
+	const ignoredViews = db.data().ignoredViews;
+	
+	db.write({ ignoredViews: [...ignoredViews, data] });
+});
 
 ipcMain.on('config-save', async (_, data) => {
 	const emptyFields = Object.entries(data)

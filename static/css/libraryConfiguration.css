@@ -1,0 +1,27 @@
+* {
+  user-select: none;
+}
+
+.lever {
+    margin-bottom: 5px;
+}
+
+.switch {
+    float: right;
+}
+
+span.viewName {
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis;
+    display: inline-block; 
+    width: calc(60%);
+}
+
+.switch label input[type=checkbox]:checked+.lever:after {
+    background-color: var(--color);
+}
+
+.switch label input[type=checkbox]:checked+.lever {
+    background-color: var(--color-accent);
+}
