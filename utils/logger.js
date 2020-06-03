@@ -59,6 +59,10 @@ class Logger {
 		}
 	}
 
+	static formatMessage(message, level) {
+		return `[${Date().toLocaleString()}] ${level}: ${message}\n`;
+	}
+
 	/**
 	 *
 	 * @private
@@ -93,15 +97,9 @@ class Logger {
 			this.createDirIfDoesntExist();
 
 			if (!fs.existsSync(this.file)) {
-				fs.writeFileSync(
-					this.file,
-					`[${Date().toLocaleString()}] ${level}: ${message}\n`
-				);
+				fs.writeFileSync(this.file, Logger.formatMessage(message, level));
 			} else {
-				fs.appendFileSync(
-					this.file,
-					`[${Date().toLocaleString()}] ${level}: ${message}\n`
-				);
+				fs.appendFileSync(this.file, Logger.formatMessage(message, level));
 			}
 
 			let files = fs.readdirSync(this.path);

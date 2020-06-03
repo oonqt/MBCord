@@ -10,12 +10,18 @@ const {
 } = require('electron');
 const Startup = require('./utils/startupHandler');
 const JsonDB = require('./utils/JsonDB');
-const request = require('request');
+const MBClient = require('./utils/MBClient');
 const DiscordRPC = require('discord-rpc');
+const UpdateChecker = require('./utils/UpdateChecker');
 const Logger = require('./utils/logger');
-const { toZero, calcEndTimestamp } = require('./utils/utils');
+const { calcEndTimestamp } = require('./utils/utils');
 const { version, name, author, homepage } = require('./package.json');
-const { clientIds, UUID, iconUrl } = require('./config/default.json');
+const {
+	clientIds,
+	UUID,
+	iconUrl,
+	updateCheckInterval
+} = require('./config/default.json');
 
 const logger = new Logger(
 	process.defaultApp ? 'console' : 'file',
@@ -23,6 +29,7 @@ const logger = new Logger(
 );
 const db = new JsonDB(path.join(app.getPath('userData'), 'config.json'));
 const startupHandler = new Startup(app);
+const checker = new UpdateChecker(author, name, version);
 
 /**
  * @type {BrowserWindow}
@@ -33,6 +40,20 @@ let mainWindow;
  * @type {Tray}
  */
 let tray;
+
+/**
+ * @type {MBClient}
+ */
+let mbc;
+
+/**
+ * @type {DiscordRPC.Client}
+ */
+let rpc;
+
+let presenceUpdate;
+
+let updateChecker;
 
 const startApp = () => {
 	mainWindow = new BrowserWindow({
@@ -45,7 +66,7 @@ const startApp = () => {
 		},
 		resizable: false,
 		title: `Configure ${name}`
-		show: false
+		// show: false
 	});
 
 	// only allow one instance
@@ -61,13 +82,88 @@ const startApp = () => {
 		mainWindow.setMenu(null);
 	}
 
+	seedDB();
+
 	if (db.data().isConfigured) {
-		migrateDB();
 		moveToTray();
-		// start presence updater
+		startPresenceUpdater();
 	} else {
-		// load config
+		loadConfigurationPage();
 	}
+
+	// we invoke cheeckForUpdates immediately, so it will check at first application start
+	updateChecker = setInterval(checkForUpdates(), updateCheckInterval);
+};
+
+const loadConfigurationPage = async () => {
+	await mainWindow.loadFile(path.join(__dirname, 'static', 'configure.html'));
+	mainWindow.webContents.send('config-type', db.data().serverType);
+
+	mainWindow.show();
+
+	appBarHide(false);
+};
+
+const resetApp = async () => {
+	db.write({ isConfigured: false });
+
+	stopPresenceUpdater();
+
+	tray.destroy();
+
+	loadConfigurationPage();
+};
+
+const toggleDisplay = () => {
+	if (db.data().doDisplayStatus) {
+		stopPresenceUpdater();
+		db.write({ doDisplayStatus: false });
+	} else {
+		startPresenceUpdater();
+		db.write({ doDisplayStatus: true });
+	}
+};
+
+const checkForUpdates = (calledFromTray) => {
+	checker.checkForUpdate((err, data) => {
+		if (err) return logger.error(err);
+
+		if (data.pending) {
+			if (!calledFromTray) clearInterval(updateChecker);
+
+			dialog.showMessageBox(
+				{
+					type: 'info',
+					buttons: ['Okay', 'Get Latest Version'],
+					message: 'A new version is available!',
+					detail: `Your version is ${version}. The latest version currently available is ${data.version}`
+				},
+				(index) => {
+					if (index === 1) {
+						shell.openExternal(`${homepage}/releases/latest`);
+					}
+				}
+			);
+		} else if (calledFromTray) {
+			dialog.showMessageBox({
+				type: 'info',
+				message: 'There are no new versions available to download'
+			});
+		}
+	});
+
+	// we return checkForUpdates because it takes in a function
+	return checkForUpdates;
+};
+
+const appBarHide = (doHide) => {
+	if (doHide) {
+		if (process.platform === 'darwin') app.dock.hide();
+	} else {
+		if (process.platform === 'darwin') app.dock.show();
+	}
+
+	mainWindow.setSkipTaskbar(doHide);
 };
 
 const moveToTray = () => {
@@ -87,7 +183,15 @@ const moveToTray = () => {
 			checked: db.data().doDisplayStatus
 		},
 		{
+			label: 'Ignored Libaries',
+			click: () => ignoredLibrariesPrompt()
+		},
+		{
 			type: 'separator'
+		},
+		{
+			label: 'Check for Updates',
+			click: () => checkForUpdates(true)
 		},
 		{
 			label: 'Show Logs',
@@ -116,376 +220,236 @@ const moveToTray = () => {
 	tray.setToolTip(name);
 	tray.setContextMenu(contextMenu);
 
-    mainWindow.hide();
+	mainWindow.hide();
 
 	// ignore the promise
 	// we dont care if the user interacts, we just want the app to start
 	dialog.showMessageBox({
-        type: 'info',
-        title: name,
-        message: `${name} has been minimized to the tray`
-    });
-    
-    if(process.platform === 'darwin') {
-        app.dock.hide();
-    } else {
-        mainWindow.setSkipTaskbar(true);
-    }
+		type: 'info',
+		title: name,
+		message: `${name} has been minimized to the tray`
+	});
+
+	appBarHide(true);
 };
 
-const migrateDB = () => {
+const ignoredLibrariesPrompt = async () => {};
+
+ipcMain.on('config-save', async (_, data) => {
+	const emptyFields = Object.entries(data)
+		.filter((entry) => !entry[1] && entry[0] !== 'password') // where entry[1] is the value, and if the field password is ignore it (emby and jelly dont require pws)
+		.map((field) => field[0]); // we map empty fields by their names
+
+	if (emptyFields.length) {
+		mainWindow.webContents.send('validation-error', emptyFields);
+		dialog.showErrorBox(
+			name,
+			'Please make sure that all the fields are filled in!'
+		);
+		return;
+	}
+
+	try {
+		mbc = new MBClient(
+			{
+				address: data.serverAddress,
+				username: data.username,
+				password: data.password,
+				protocol: data.protocol,
+				port: data.port
+			},
+			{
+				deviceName: name,
+				deviceId: UUID,
+				deviceVersion: version,
+				iconUrl: iconUrl
+			}
+		);
+
+		await mbc.login();
+
+		db.write({ ...data, isConfigured: true, doDisplayStatus: true });
+
+		moveToTray();
+		startPresenceUpdater();
+	} catch (error) {
+		logger.error(error);
+		dialog.showErrorBox(name, 'Invalid server address or login credentials');
+	}
+});
+
+const stopPresenceUpdater = async () => {
+	if (mbc) {
+		await mbc.logout();
+		mbc = null;
+	}
+	if (rpc) rpc.clearActivity();
+	clearInterval(presenceUpdate);
+};
+
+const startPresenceUpdater = async () => {
+	const data = db.data();
+
+	if (!mbc) {
+		mbc = new MBClient(
+			{
+				address: data.serverAddress,
+				username: data.username,
+				password: data.password,
+				protocol: data.protocol,
+				port: data.port
+			},
+			{
+				deviceName: name,
+				deviceId: UUID,
+				deviceVersion: version,
+				iconUrl: iconUrl
+			}
+		);
+	}
+
+	await mbc.login();
+
+	await connectRPC();
+
+	setPresence();
+	presenceUpdate = setInterval(setPresence, 15000);
+
+	try {
+		await mbc.login();
+	} catch (err) {
+		logger.error(`Failed to authenticate: ${err}`);
+	}
+};
+
+const setPresence = async () => {
+	const data = db.data();
+
+	try {
+		let sessions;
+
+		try {
+			sessions = await mbc.getSessions();
+		} catch (err) {
+			return logger.error(`Failed to get sessions: ${err}`);
+		}
+
+		const session = sessions.filter(
+			(session) =>
+				session.UserName === data.username &&
+				session.NowPlayingItem !== undefined
+		)[0];
+
+		if (session) {
+			const currentEpochSeconds = new Date().getTime() / 1000;
+
+			const endTimestamp = calcEndTimestamp(session, currentEpochSeconds);
+
+			switch (session.NowPlayingItem.Type) {
+				case 'Episode':
+					// prettier-ignore
+					const seasonNum = session.NowPlayingItem.ParentIndexNumber.padStart(2, '0');
+					// prettier-ignore
+					const episodeNum = session.NowPlayingItem.IndexNumber.padStart(2, '0');
+
+					rpc.setActivity({
+						details: `Watching ${session.NowPlayingItem.SeriesName}`,
+						state: `${
+							session.NowPlayingItem.ParentIndexNumber ? `S${seasonNum}` : ''
+						}${session.NowPlayingItem.IndexNumber ? `E${episodeNum}: ` : ''}${
+							session.NowPlayingItem.Name
+						}`,
+						largeImageKey: 'large',
+						largeImageText: `Watching on ${session.Client}`,
+						smallImageKey: session.PlayState.IsPaused ? 'pause' : 'play',
+						smallImageText: session.PlayState.IsPaused ? 'Paused' : 'Playing',
+						instance: false,
+						endTimestamp: !session.PlayState.IsPaused && endTimestamp
+					});
+					break;
+				case 'Movie':
+					rpc.setActivity({
+						details: 'Watching a Movie',
+						state: session.NowPlayingItem.Name,
+						largeImageKey: 'large',
+						largeImageText: `Watching on ${session.Client}`,
+						smallImageKey: session.PlayState.IsPaused ? 'pause' : 'play',
+						smallImageText: session.PlayState.IsPaused ? 'Paused' : 'Playing',
+						instance: false,
+						endTimestamp: !session.PlayState.IsPaused && endTimestamp
+					});
+					break;
+				case 'Audio':
+					rpc.setActivity({
+						details: `Listening to ${session.NowPlayingItem.Name}`,
+						state: `By ${session.NowPlayingItem.AlbumArtist}`,
+						largeImageKey: 'large',
+						largeImageText: `Listening on ${session.Client}`,
+						smallImageKey: session.PlayState.IsPaused ? 'pause' : 'play',
+						smallImageText: session.PlayState.IsPaused ? 'Paused' : 'Playing',
+						instance: false,
+						endTimestamp: !session.PlayState.IsPaused && endTimestamp
+					});
+					break;
+				default:
+					rpc.setActivity({
+						details: 'Watching Other Content',
+						state: session.NowPlayingItem.Name,
+						largeImageKey: 'large',
+						largeImageText: `Watching on ${session.Client}`,
+						smallImageKey: session.PlayState.IsPaused ? 'pause' : 'play',
+						smallImageText: session.PlayState.IsPaused ? 'Paused' : 'Playing',
+						instance: false,
+						endTimestamp: !session.PlayState.IsPaused && endTimestamp
+					});
+			}
+		} else {
+			if (rpc) rpc.clearActivity();
+		}
+	} catch (error) {
+		logger.error(`Failed to set activity: ${error}`);
+	}
+};
+
+const connectRPC = () => {
+	return new Promise((resolve) => {
+		const data = db.data();
+
+		rpc = new DiscordRPC.Client({ transport: 'ipc' });
+		rpc
+			.login({ clientId: clientIds[data.serverType] })
+			.then(() => resolve())
+			.catch(() => {
+				logger.error(
+					'Failed to connect to Discord. Attempting to reconnect in 30 seconds'
+				);
+
+				setTimeout(connectRPC, 30000);
+			});
+
+		rpc.transport.once('close', () => {
+			rpc = null; // prevent cannot read property write of null errors
+
+			logger.warn(
+				'Discord RPC connection closed. Attempting to reconnect in 30 seconds'
+			);
+
+			setTimeout(connectRPC, 30000);
+		});
+
+		rpc.transport.once('open', () => {
+			logger.info('Connected to Discord');
+		});
+	});
+};
+
+const seedDB = () => {
 	if (db.data().doDisplayStatus === undefined)
 		db.write({ doDisplayStatus: true }); // older releases wont have this , so enable by default
+	if (!db.data().serverType) db.write({ serverType: 'emby' }); // we want emby by default
+	if (db.data().ignoredViews === undefined) {
+		db.write({ ignoredViews: [] });
+	}
 };
 
 app.on('ready', () => startApp());
-
-// let rpc;
-// let mainWindow;
-// let tray;
-// let accessToken;
-// let statusUpdate;
-
-// async function startApp() {
-//     mainWindow = new BrowserWindow({
-//         width: 480,
-//         height: 310,
-//         minimizable: false,
-//         maximizable: false,
-//         webPreferences: {
-//             nodeIntegration: true
-//         },
-//         resizable: false,
-//         title: `Configure ${name}`
-//     });
-
-//     setTimeout(checkUpdates, 2500);
-
-//     const lock = app.requestSingleInstanceLock();
-//     if(!lock) {
-//         app.quit(); // quit if multiple instances are found....
-//     }
-
-//     // check env to allow dev tools and resizing.......
-//     if(process.defaultApp) {
-//         mainWindow.setResizable(true);
-//         mainWindow.setMaximizable(true);
-//         mainWindow.setMinimizable(true);
-//     } else {
-//         mainWindow.setMenu(null);
-//     }
-
-//     if(db.data().isConfigured === true) {
-//         if(!db.data().doDisplayStatus) db.write({ doDisplayStatus: true }); // for existing installations that do not have doDisplayStatus in their config. This could be removed in future releases.
-//         moveToTray();
-//         connectRPC();
-//     } else {
-//         if(!db.data().serverType) db.write({ serverType: "emby" });
-//         await mainWindow.loadFile(path.join(__dirname, "static", "configure.html"));
-//         mainWindow.webContents.send("config-type", db.data().serverType);
-//     }
-// }
-
-// ipcMain.on("theme-change", (_, data) => {
-//     switch(data) {
-//         case "jellyfin":
-//             db.write({ serverType: "jellyfin" });
-//             break;
-//         case "emby":
-//             db.write({ serverType: "emby" });
-//             break;
-//     }
-// });
-
-// function moveToTray() {
-//     tray = new Tray(path.join(__dirname, "icons", "tray.png"));
-
-//     const contextMenu = Menu.buildFromTemplate([
-//         {
-//             type: "checkbox",
-//             label: "Run at Startup",
-//             click: () => startupHandler.toggle(),
-//             checked: startupHandler.isEnabled
-//         },
-//         {
-//             type: "checkbox",
-//             label: "Display as Status",
-//             click: () => toggleDisplay(),
-//             checked: db.data().doDisplayStatus
-//         },
-//         {
-//             type: "separator"
-//         },
-//         {
-//             label: "Show Logs",
-//             click: () => shell.openItem(logger.logPath)
-//         },
-//         {
-//             label: "Reset App",
-//             click: () => resetApp()
-//         },
-//         {
-//             type: "separator"
-//         },
-//         {
-//             label: "Restart App",
-//             click: () => {
-//                 app.quit();
-//                 app.relaunch();
-//             }
-//         },
-//         {
-//             label: "Quit",
-//             role: "quit"
-//         }
-//     ]);
-
-//     tray.setToolTip(name);
-//     tray.setContextMenu(contextMenu);
-
-//     mainWindow.setSkipTaskbar(true); // hide for windows specifically
-//     mainWindow.hide();
-
-//     dialog.showMessageBox({
-//         type: "info",
-//         title: name,
-//         message: `${name} has been minimized to the tray`
-//     });
-
-//     if(process.platform === "darwin") app.dock.hide(); // hide from dock on macos
-// }
-
-// function toggleDisplay() {
-//     let doDisplay = db.data().doDisplayStatus;
-
-//     if(doDisplay) {
-//         db.write({ doDisplayStatus: false });
-//         rpc.clearActivity();
-//         clearInterval(statusUpdate);
-//     } else {
-//         db.write({ doDisplayStatus: true });
-
-//         connectRPC();
-//     }
-
-//     return;
-// }
-
-// async function resetApp() {
-//     db.write({ isConfigured: false });
-
-//     accessToken = null;
-
-//     if(statusUpdate) clearInterval(statusUpdate); // check
-
-//     if(rpc) rpc.clearActivity(); // check
-
-//     await mainWindow.loadFile(path.join(__dirname, "static", "configure.html"));
-//     mainWindow.show();
-//     mainWindow.setSkipTaskbar(false);
-//     mainWindow.webContents.send("config-type", db.data().serverType);
-
-//     if(process.platform === "darwin") app.dock.show();
-
-//     tray.destroy();
-// }
-
-// ipcMain.on("config-save", async (_, data) => {
-//     const emptyFields = Object.entries(data)
-//         .filter(field => !field[1])
-//         .map(field => field[0]);
-
-//     if(emptyFields.length > 0) {
-//         mainWindow.webContents.send("validation-error", emptyFields);
-//         dialog.showErrorBox(name, "Please make sure that all the fields are filled in");
-//         return;
-//     }
-
-//     try {
-//         accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version, name, UUID, iconUrl);
-
-//         db.write({ ...data, isConfigured: true, doDisplayStatus: true });
-
-//         moveToTray();
-//         connectRPC();
-//     } catch (error) {
-//         logger.log(error);
-//         dialog.showErrorBox(name, "Invalid server address or login credentials");
-//     }
-// });
-
-// function getToken(username, password, serverAddress, port, protocol, deviceVersion, deviceName, deviceId, IconUrl) {
-//     return new Promise((resolve, reject) => {
-//         request.post(`${protocol}://${serverAddress}:${port}/emby/Users/AuthenticateByName`, {
-//                 headers: {
-//                     Authorization: `Emby Client=Other, Device=${deviceName}, DeviceId=${deviceId}, Version=${deviceVersion}`
-//                 },
-//                 body: {
-//                     "Username": username,
-//                     "Pw": password
-//                 },
-//                 json: true
-//             }, (err, res, body) => {
-//                 if(err) return reject(err);
-//                 if(res.statusCode !== 200) return reject(`Failed to authenticate. Status: ${res.statusCode}. Reason: ${body}`);
-
-//                 // set device icon
-//                 request.post(`${protocol}://${serverAddress}:${port}/emby/Sessions/Capabilities/Full`, {
-//                     headers: {
-//                         "X-Emby-Token": body.AccessToken
-//                     },
-//                     body: {
-//                         IconUrl
-//                     },
-//                     json: true
-//                 }, (err, res) => {
-//                     if(err) return logger.log(`Failed to set device icon: ${err}`);
-//                     if(res.statusCode !== 200 && res.statusCode !== 204) return logger.log(`Failed to set device icon. Status: ${res.statusCode}`);
-//                 });
-
-//                 resolve(body.AccessToken);
-//             });
-//     })
-// }
-
-// function connectRPC() {
-//     if(db.data().isConfigured && db.data().doDisplayStatus) {
-//         rpc = new DiscordRPC.Client({ transport: "ipc" });
-//         rpc.login({ clientId: clientIds[db.data().serverType] })
-//             .then(() => {
-//                 setPresence();
-
-//                 statusUpdate = setInterval(setPresence, 15000);
-//             })
-//             .catch(() => {
-//                 logger.log("Failed to connect to discord. Attempting to reconnect");
-//                 setTimeout(connectRPC, 15000);
-//             });
-
-//         rpc.transport.once("close", () => {
-//             clearInterval(statusUpdate);
-//             connectRPC();
-//             logger.log("Discord RPC connection terminated. Attempting to reconnect.");
-//         });
-//     }
-// }
-
-// async function setPresence() {
-//     const data = db.data();
-
-//     if(!accessToken) accessToken = await getToken(data.username, data.password, data.serverAddress, data.port, data.protocol, version, name, UUID, iconUrl)
-//         .catch(err => logger.log(err));
-
-//     request(`${data.protocol}://${data.serverAddress}:${data.port}/emby/Sessions`, {
-//         headers: {
-//             "X-Emby-Token": accessToken
-//         },
-//         json: true
-//     }, (err, res, body) => {
-//         if(err) return logger.log(`Failed to authenticate: ${err}`);
-//         if(res.statusCode !== 200) return logger.log(`Failed to authenticated: ${res.statusCode}. Reason: ${body}`);
-
-//         const session = body.filter(session =>
-//             session.UserName === data.username &&
-//             session.DeviceName !== name &&
-//             session.NowPlayingItem)[0];
-
-//             if(session) {
-//             const currentEpochSeconds = new Date().getTime() / 1000;
-//             const endTimestamp = Math.round((currentEpochSeconds + Math.round(((session.NowPlayingItem.RunTimeTicks - session.PlayState.PositionTicks) / 10000) / 1000)));
-//             const endsIn = Math.round(calcEndTimestamp(session, currentEpochSeconds) - currentEpochSeconds);
-
-//             setTimeout(setPresence, endsIn * 1000);
-
-//             switch(session.NowPlayingItem.Type) {
-//                 case "Episode":
-//                     rpc.setActivity({
-//                         details: `Watching ${session.NowPlayingItem.SeriesName}`,
-//                         state: `S${toZero(session.NowPlayingItem.ParentIndexNumber)}E${toZero(session.NowPlayingItem.IndexNumber)}: ${session.NowPlayingItem.Name}`,
-//                         largeImageKey: "large",
-//                         largeImageText: `Watching on ${session.Client}`,
-//                         smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
-//                         smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-//                         instance: false,
-//                         endTimestamp: !session.PlayState.IsPaused && endTimestamp
-//                     });
-//                     break;
-//                 case "Movie":
-//                     rpc.setActivity({
-//                         details: "Watching a Movie",
-//                         state: session.NowPlayingItem.Name,
-//                         largeImageKey: "large",
-//                         largeImageText: `Watching on ${session.Client}`,
-//                         smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
-//                         smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-//                         instance: false,
-//                         endTimestamp: !session.PlayState.IsPaused && endTimestamp
-//                     });
-//                     break;
-//                 case "Audio":
-//                     rpc.setActivity({
-//                         details: `Listening to ${session.NowPlayingItem.Name}`,
-//                         state: `By ${session.NowPlayingItem.AlbumArtist}`,
-//                         largeImageKey: "large",
-//                         largeImageText: `Listening on ${session.Client}`,
-//                         smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
-//                         smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-//                         instance: false,
-//                         endTimestamp: !session.PlayState.IsPaused && endTimestamp
-//                     });
-//                     break;
-//                 default:
-//                     rpc.setActivity({
-//                         details: "Watching Other Content",
-//                         state: session.NowPlayingItem.Name,
-//                         largeImageKey: "large",
-//                         largeImageText: `Watching on ${session.Client}`,
-//                         smallImageKey: session.PlayState.IsPaused ? "pause" : "play",
-//                         smallImageText: session.PlayState.IsPaused ? "Paused" : "Playing",
-//                         instance: false,
-//                         endTimestamp: !session.PlayState.IsPaused && endTimestamp
-//                     });
-//             }
-//         } else {
-//             if(rpc) rpc.clearActivity();
-//         }
-//     });
-// }
-
-// function checkUpdates() {
-//     request(`https://api.github.com/repos/${author}/${name}/releases/latest`,
-//         {
-//             headers: {
-//                 "User-Agent": name
-//             }
-//         },
-//     (err, _, body) => {
-//         if(err) return logger.log(err);
-
-//         body = JSON.parse(body);
-
-//         if(body.tag_name !== version) {
-//             dialog.showMessageBox({
-//                 type: "info",
-//                 buttons: ["Okay", "Get Latest Version"],
-//                 message: "A new version is available!",
-//                 detail: `Your version is ${version}. The latest version is currently ${body.tag_name}`
-//             }, index => {
-//                 if(index === 1) {
-//                     shell.openExternal(`${homepage}/releases/latest`);
-//                 }
-//             });
-//         }
-//     });
-// }
-
-// function calcEndTimestamp(session, currentEpochSeconds) {
-//     return Math.round((currentEpochSeconds + Math.round(((session.NowPlayingItem.RunTimeTicks - session.PlayState.PositionTicks) / 10000) / 1000)));
-// }
-
-// app.on('window-all-closed', () => {
-//     app.quit();
-// });
-
-// process
-//     .on("unhandledRejection", (reason, p) => logger.log(`${reason} at ${p}`))

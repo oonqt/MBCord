@@ -1,11 +1,3 @@
-  
-/**
- * 
- * @param {number} number Season/episode number
- * @returns {string} Formatted season/episode number (S01/E01)
- */
-exports.toZero = number => (`0${number}`).slice(-2);
-
 /**
  * 
  * @param {object} session MediaBrowser session object
