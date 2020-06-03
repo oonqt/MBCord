@@ -24,6 +24,10 @@ class Logger {
 		this.path = logPath;
 		this.logRetentionCount = logRetentionCount;
 		this.timestamp = new Date();
+
+		/**
+		 * @private
+		 */
 		this.logLevel = LOG_LEVEL_PRIORITIES[logLevel];
 
 		this.file = path.join(
@@ -32,8 +36,12 @@ class Logger {
 		);
 	}
 
-	set logLevel(level) {
+	set level(level) {
 		this.logLevel = LOG_LEVEL_PRIORITIES[level];
+	}
+
+	get level() {
+		return Object.keys(LOG_LEVEL_PRIORITIES).find(key => LOG_LEVEL_PRIORITIES[key] === this.logLevel);
 	}
 
 	/**
@@ -110,9 +118,9 @@ class Logger {
 				this.createDirIfDoesntExist();
 
 				if (!fs.existsSync(this.file)) {
-					fs.writeFileSync(this.file, Logger.formatMessage(message, level));
+					fs.writeFileSync(this.file, this.constructor.formatMessage(message, level));
 				} else {
-					fs.appendFileSync(this.file, Logger.formatMessage(message, level));
+					fs.appendFileSync(this.file, this.constructor.formatMessage(message, level));
 				}
 
 				let files = fs.readdirSync(this.path);

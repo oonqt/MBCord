@@ -44,12 +44,13 @@ class GithubClient {
 			{
 				headers: {
 					'User-Agent': `${this.repoName}`
-				}
+				},
+				json: true
 			},
-			(err, _, body) => {
+			(err, res, body) => {
 				if (err) cb(err, null);
-
-				body = JSON.parse(body);
+				if (res.statusCode !== 200)
+					cb(`Status: ${res.statusCode} Body: ${body}`);
 
 				const currentVersion = this.constructor.extractVersionAsInt(
 					this.version

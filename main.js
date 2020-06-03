@@ -90,6 +90,7 @@ const startApp = () => {
 		process.defaultApp ? 'console' : 'file',
 		app.getPath('userData'),
 		logRetentionCount,
+		name,
 		db.data().logLevel
 	);
 
@@ -206,30 +207,34 @@ const moveToTray = () => {
 			label: 'Log Level',
 			submenu: [
 				{
+					type: 'checkbox',
 					label: 'debug',
 					click: () => setLogLevel('debug'),
-					checked: isSetLogLevel('debug')
+					checked: logger.level === 'debug'
 				},
 				{
+					type: 'checkbox',
 					label: 'info',
 					click: () => setLogLevel('info'),
-					checked: isSetLogLevel('info')
+					checked: logger.level === 'info'
 				},
 				{
+					type: 'checkbox',
 					label: 'warn',
 					click: () => setLogLevel('warn'),
-					checked: isSetLogLevel('warn')
+					checked: logger.level === 'warn'
 				},
 				{
+					type: 'checkbox',
 					label: 'error',
 					click: () => setLogLevel('error'),
-					checked: isSetLogLevel('error')
+					checked: logger.level === 'error'
 				}
 			]
 		},
 		{
 			label: 'Show Logs',
-			click: () => shell.openItem(logger.logPath)
+			click: () => shell.openPath(logger.logPath)
 		},
 		{
 			label: 'Reset App',
@@ -267,11 +272,9 @@ const moveToTray = () => {
 	appBarHide(true);
 };
 
-const isSetLogLevel = (level) => db.data().logLevel === level;
-
 const setLogLevel = (level) => {
 	db.write({ logLevel: level });
-	logger.logLevel = level;
+	logger.level = level;
 };
 
 const ignoredLibrariesPrompt = async () => {};
@@ -375,11 +378,11 @@ const setPresence = async () => {
 			return logger.error(`Failed to get sessions: ${err}`);
 		}
 
-		const session = sessions.filter(
+		const session = sessions.find(
 			(session) =>
 				session.UserName === data.username &&
 				session.NowPlayingItem !== undefined
-		)[0];
+		);
 
 		if (session) {
 			const currentEpochSeconds = new Date().getTime() / 1000;
