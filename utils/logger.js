@@ -4,6 +4,13 @@ const stringify = require('json-stringify-safe');
 
 require('colors');
 
+const LOG_LEVEL_PRIORITIES = {
+	"error": 1,
+	"info": 3,
+	"warn": 2,
+	"debug": 4
+}
+
 class Logger {
 	/**
 	 *
@@ -12,16 +19,21 @@ class Logger {
 	 * @param {number} logRetentionCount Amount of logs to keep before removing old logs
 	 * @param {string} loggerName Name of the log file & entries
 	 */
-	constructor(logType, logPath, logRetentionCount, loggerName) {
+	constructor(logType, logPath, logRetentionCount, loggerName, logLevel) {
 		this.logType = logType;
 		this.path = logPath;
 		this.logRetentionCount = logRetentionCount;
 		this.timestamp = new Date();
+		this.logLevel = LOG_LEVEL_PRIORITIES[logLevel];
 
 		this.file = path.join(
 			this.path,
 			`${loggerName}-${(this.timestamp.getTime() / 1000) | 0}.txt`
 		);
+	}
+
+	set logLevel(level) {
+		this.logLevel = LOG_LEVEL_PRIORITIES[level];
 	}
 
 	/**
@@ -71,41 +83,43 @@ class Logger {
 	 * @returns {void}
 	 */
 	write(_message, level) {
-		let message;
+		if(LOG_LEVEL_PRIORITIES[level] <= this.logLevel) {
+			let message;
 
-		if (typeof _message === 'object') {
-			message = stringify(_message, null, '  ');
-		} else {
-			message = _message;
-		}
-
-		if (this.logType === 'console') {
-			switch (level) {
-				case 'info':
-					console.log('Info: '.blue + message);
-					break;
-				case 'warn':
-					console.warn('Warn: '.yellow + message);
-					break;
-				case 'error':
-					console.error('Error: '.red + message);
-					break;
-				case 'debug':
-					console.debug('Debug: '.green + message);
-			}
-		} else if (this.logType === 'file') {
-			this.createDirIfDoesntExist();
-
-			if (!fs.existsSync(this.file)) {
-				fs.writeFileSync(this.file, Logger.formatMessage(message, level));
+			if (typeof _message === 'object') {
+				message = stringify(_message, null, '  ');
 			} else {
-				fs.appendFileSync(this.file, Logger.formatMessage(message, level));
+				message = _message;
 			}
 
-			let files = fs.readdirSync(this.path);
+			if (this.logType === 'console') {
+				switch (level) {
+					case 'info':
+						console.log('Info: '.blue + message);
+						break;
+					case 'warn':
+						console.warn('Warn: '.yellow + message);
+						break;
+					case 'error':
+						console.error('Error: '.red + message);
+						break;
+					case 'debug':
+						console.debug('Debug: '.green + message);
+				}
+			} else if (this.logType === 'file') {
+				this.createDirIfDoesntExist();
 
-			if (files.length > this.logRetentionCount) {
-				fs.unlinkSync(path.join(this.path, files[0]));
+				if (!fs.existsSync(this.file)) {
+					fs.writeFileSync(this.file, Logger.formatMessage(message, level));
+				} else {
+					fs.appendFileSync(this.file, Logger.formatMessage(message, level));
+				}
+
+				let files = fs.readdirSync(this.path);
+
+				if (files.length > this.logRetentionCount) {
+					fs.unlinkSync(path.join(this.path, files[0]));
+				}
 			}
 		}
 	}

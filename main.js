@@ -20,16 +20,18 @@ const {
 	clientIds,
 	UUID,
 	iconUrl,
-	updateCheckInterval
+	updateCheckInterval,
+	logRetentionCount
 } = require('./config/default.json');
 
-const logger = new Logger(
-	process.defaultApp ? 'console' : 'file',
-	app.getPath('userData')
-);
 const db = new JsonDB(path.join(app.getPath('userData'), 'config.json'));
 const startupHandler = new Startup(app);
 const checker = new UpdateChecker(author, name, version);
+
+/**
+ * @type {Logger}
+ */
+let logger;
 
 /**
  * @type {BrowserWindow}
@@ -82,7 +84,14 @@ const startApp = () => {
 		mainWindow.setMenu(null);
 	}
 
-	seedDB();
+	seedDB(); // perform migrations and fill in initial data
+
+	logger = new Logger(
+		process.defaultApp ? 'console' : 'file',
+		app.getPath('userData'),
+		logRetentionCount,
+		db.data().logLevel
+	);
 
 	if (db.data().isConfigured) {
 		moveToTray();
@@ -194,6 +203,31 @@ const moveToTray = () => {
 			click: () => checkForUpdates(true)
 		},
 		{
+			label: 'Log Level',
+			submenu: [
+				{
+					label: 'debug',
+					click: () => setLogLevel('debug'),
+					checked: isSetLogLevel('debug')
+				},
+				{
+					label: 'info',
+					click: () => setLogLevel('info'),
+					checked: isSetLogLevel('info')
+				},
+				{
+					label: 'warn',
+					click: () => setLogLevel('warn'),
+					checked: isSetLogLevel('warn')
+				},
+				{
+					label: 'error',
+					click: () => setLogLevel('error'),
+					checked: isSetLogLevel('error')
+				}
+			]
+		},
+		{
 			label: 'Show Logs',
 			click: () => shell.openItem(logger.logPath)
 		},
@@ -231,6 +265,13 @@ const moveToTray = () => {
 	});
 
 	appBarHide(true);
+};
+
+const isSetLogLevel = (level) => db.data().logLevel === level;
+
+const setLogLevel = (level) => {
+	db.write({ logLevel: level });
+	logger.logLevel = level;
 };
 
 const ignoredLibrariesPrompt = async () => {};
@@ -444,12 +485,11 @@ const connectRPC = () => {
 };
 
 const seedDB = () => {
-	if (db.data().doDisplayStatus === undefined)
-		db.write({ doDisplayStatus: true }); // older releases wont have this , so enable by default
+	// prettier-ignore
+	if (db.data().doDisplayStatus === undefined) db.write({ doDisplayStatus: true }); // older releases wont have this , so enable by default
 	if (!db.data().serverType) db.write({ serverType: 'emby' }); // we want emby by default
-	if (db.data().ignoredViews === undefined) {
-		db.write({ ignoredViews: [] });
-	}
+	if (!db.data().ignoredViews) db.write({ ignoredViews: [] });
+	if (!db.data().logLevel) db.write({ logLevel: 'info' });
 };
 
 app.on('ready', () => startApp());
