@@ -3,7 +3,7 @@
         "emby": "696111620220256383",
         "jellyfin": "696112089793560691"
     },
-    "updateCheckInterval": 3600000,
+    "updateCheckInterval": 900000,
     "UUID": "e695b395-e7e1-4740-8120-6bd549c8bb09",
     "iconUrl": "https://user-images.githubusercontent.com/36819562/73629369-c0b4a100-4607-11ea-84c8-ff6c73d5deba.png",
     "logRetentionCount": 10
