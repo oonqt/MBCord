@@ -67,8 +67,8 @@ const startApp = () => {
 			nodeIntegration: true
 		},
 		resizable: false,
-		title: `Configure ${name}`
-		// show: false
+		title: `Configure ${name}`,
+		show: false
 	});
 
 	// only allow one instance
@@ -106,6 +106,7 @@ const startApp = () => {
 };
 
 const loadConfigurationPage = async () => {
+	mainWindow.setSize(480, 310);
 	await mainWindow.loadFile(path.join(__dirname, 'static', 'configure.html'));
 	mainWindow.webContents.send('config-type', db.data().serverType);
 
@@ -113,7 +114,7 @@ const loadConfigurationPage = async () => {
 };
 
 const resetApp = async () => {
-	db.write({ isConfigured: false });
+	db.write({ isConfigured: false, ignoredViews: [], logLevel: 'info' });
 
 	stopPresenceUpdater();
 
@@ -193,7 +194,7 @@ const moveToTray = () => {
 			checked: db.data().doDisplayStatus
 		},
 		{
-			label: 'Ignored Libaries',
+			label: 'Set Ignored Libaries',
 			click: () => ignoredLibrariesPrompt()
 		},
 		{
@@ -280,28 +281,49 @@ const ignoredLibrariesPrompt = async () => {
 		path.join(__dirname, 'static', 'libraryConfiguration.html')
 	);
 
-	// set height/width
+	mainWindow.setSize(400, 500);
 
 	let userViews;
 
 	try {
 		userViews = await mbc.getUserViews();
 	} catch (err) {
-		dialog.showErrorBox(name, "Failed to fetch libraries for your user");
+		dialog.showErrorBox(name, 'Failed to fetch libraries for your user');
 		logger.error(err);
 		return;
 	}
 
 	mainWindow.webContents.send('config-type', db.data().serverType);
-	mainWindow.webContents.send('receive-views', userViews);
+	mainWindow.webContents.send('receive-views', {
+		// undefined is for mixedcontent libraries (which dont have a collection type property for some reason?)
+		// we dont want people to select libraries like playlist and collections since those are virtual libraries and not actual libraries
+		availableViews: userViews.filter(view => view.CollectionType === undefined || !["tvshows", "movies", "homevideos", "music", "musicvideos", "audiobooks"].includes(view.CollectionType)), 
+		ignoredViews: db.data().ignoredViews
+	});
+
+	mainWindow.addListener('close', closeNoExit = (e) => {
+		e.preventDefault();
+		mainWindow.hide();
+		appBarHide(true);
+		mainWindow.removeListener('close', closeNoExit);
+	});
+	// for this window we ignore the event
 
 	appBarHide(false);
 };
 
 ipcMain.on('view-save', (_, data) => {
 	const ignoredViews = db.data().ignoredViews;
-	
-	db.write({ ignoredViews: [...ignoredViews, data] });
+
+	if (ignoredViews.includes(data)) {
+		ignoredViews.splice(ignoredViews.indexOf(data), 1);
+	} else {
+		ignoredViews.push(data);
+	}
+
+	db.write({
+		ignoredViews
+	});
 });
 
 ipcMain.on('config-save', async (_, data) => {
@@ -311,10 +333,11 @@ ipcMain.on('config-save', async (_, data) => {
 
 	if (emptyFields.length) {
 		mainWindow.webContents.send('validation-error', emptyFields);
-		dialog.showErrorBox(
-			name,
-			'Please make sure that all the fields are filled in!'
-		);
+		dialog.showMessageBox(mainWindow, {
+			title: name,
+			type: 'error',
+			detail: 'Please make sure that all the fields are filled in!'
+		});
 		return;
 	}
 
@@ -343,7 +366,11 @@ ipcMain.on('config-save', async (_, data) => {
 		startPresenceUpdater();
 	} catch (error) {
 		logger.error(error);
-		dialog.showErrorBox(name, 'Invalid server address or login credentials');
+		dialog.showMessageBox(mainWindow, {
+			type: 'error',
+			title: name,
+			detail: 'Invalid server address or login credentials'
+		});
 	}
 });
 

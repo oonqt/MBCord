@@ -1,7 +1,5 @@
 const { ipcRenderer } = require('electron');
 
-console.log(colors);
-
 document.getElementById('configuration').addEventListener('submit', (e) => {
 	e.preventDefault();
 
@@ -27,7 +25,7 @@ document.getElementById('serverType').addEventListener('click', function () {
 	const root = document.documentElement;
 	const current = getComputedStyle(root).getPropertyValue('--color');
 
-	if (current === embyTheme) {
+	if (current === colors.embyTheme.solid) {
 		document.documentElement.style.setProperty('--color', colors.jellyfinTheme.solid);
 		this.textContent = 'Switch to Emby?';
 		ipcRenderer.send('theme-change', 'jellyfin');

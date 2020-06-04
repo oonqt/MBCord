@@ -24,6 +24,30 @@ class MBClient {
 		return `${this.protocol}://${this.address}:${this.port}/emby`;
 	}
 
+	/**
+	 * 
+	 * @param {string} itemId ID of the item 
+	 * @returns {Promise<string>} The item ID
+	 */
+	getContainingLibraryId(itemId) {
+		return new Promise((resolve, reject) => {
+			request(`${this.serverAddress}`, {
+				headers: {
+					"X-Emby-Token": this.accessToken
+				},
+				json: true
+			}, (err, res, body) => {
+				if (err) return reject(err);
+				if (res.statusCode !== 200) return reject(`Status: ${res.statusCode} Body: ${res.body}`);
+
+				resolve(); // some id in the body
+			});
+		});
+	}
+
+	/**
+	 * @returns {Promise<void>} the sessions
+	 */
 	getSessions() {
 		return new Promise((resolve, reject) => {
 			request(
@@ -45,6 +69,9 @@ class MBClient {
 		});
 	}
 
+	/**
+	 * @returns {Promise<void>}
+	 */
 	assignDeviceCapabilities() {
 		return new Promise((resolve, reject) => {
 			request.post(
@@ -69,6 +96,9 @@ class MBClient {
 		});
 	}
 
+	/**
+	 * @returns {Promise<object>} 
+	 */
 	getUserViews() {
 		return new Promise((resolve, reject) => {
 			request(
@@ -90,6 +120,9 @@ class MBClient {
 		});
 	}
 
+	/**
+	 * @returns {Promise<string>}
+	 */
 	login() {
 		return new Promise((resolve, reject) => {
             if(this.accessToken) resolve();
@@ -127,6 +160,9 @@ class MBClient {
 		});
 	}
 
+	/**
+	 * @returns {Promise<string>}
+	 */
 	logout() {
 		return new Promise((resolve) => {
 			if (this.userId) this.userId = null;

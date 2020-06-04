@@ -1,29 +1,29 @@
 const { ipcRenderer } = require('electron');
 
 ipcRenderer.on('receive-views', (_, views) => {
-	document.getElementById('userViewsList').innerHTML = views.map(
+	document.getElementById('userViewsList').innerHTML = views.availableViews.map(
 		(view) => `<li class="collection-item">
                         <span class="viewName">
                             ${view.Name}
                         </span>
                         <div class="switch">
                             <label>
-                                Disabled
-                                <input type="checkbox" class="viewDisableToggle" id="${view.Id}">
+                                <span>${views.ignoredViews.includes(view.Id) ? "Ignored" : "Watching"}</span>
+                                <input type="checkbox" class="viewDisableToggle" id="${view.Id}" ${views.ignoredViews.includes(view.Id) && "checked"}>
                                 <span class="lever"></span>
                             </label>
                         </div>
                     </li>`
-    );
+    ).join("");
     
     document.querySelectorAll('.viewDisableToggle').forEach((view) => {
         view.addEventListener("change", function() {
-            var self = this;
-            const viewConfiguration = {
-                [self.id]: self.checked                
+            if(this.checked) {
+                view.parentElement.querySelector("span").textContent = "Ignored"
+            } else {
+                view.parentElement.querySelector("span").textContent = "Watching"
             }
-
-            ipcRenderer.send("view-save", viewConfiguration);
+            ipcRenderer.send("view-save", this.id);
         });
     });
 });

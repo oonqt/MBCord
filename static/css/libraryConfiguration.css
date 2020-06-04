@@ -25,3 +25,7 @@ span.viewName {
 .switch label input[type=checkbox]:checked+.lever {
     background-color: var(--color-accent);
 }
+
+.switch label .lever:before {
+    background-color: var(--color-accent);
+}
