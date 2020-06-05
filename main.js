@@ -14,6 +14,7 @@ const MBClient = require('./utils/MBClient');
 const DiscordRPC = require('discord-rpc');
 const UpdateChecker = require('./utils/UpdateChecker');
 const Logger = require('./utils/logger');
+const SettingsModel = require('./SettingsModel');
 const { calcEndTimestamp } = require('./utils/utils');
 const { version, name, author, homepage } = require('./package.json');
 const {
@@ -24,7 +25,7 @@ const {
 	logRetentionCount
 } = require('./config/default.json');
 
-const db = new JsonDB(path.join(app.getPath('userData'), 'config.json'));
+const db = new JsonDB(path.join(app.getPath('userData'), 'config.json'), SettingsModel);
 const startupHandler = new Startup(app);
 const checker = new UpdateChecker(author, name, version);
 
@@ -177,6 +178,17 @@ const appBarHide = (doHide) => {
 	mainWindow.setSkipTaskbar(doHide);
 };
 
+ipcMain.on('theme-change', (_, data) => {
+	switch (data) {
+		case 'jellyfin':
+			db.write({ serverType: 'jellyfin' });
+			break;
+		case 'emby':
+			db.write({ serverType: 'emby' });
+			break;
+	}
+});
+
 const moveToTray = () => {
 	tray = new Tray(path.join(__dirname, 'icons', 'tray.png'));
 
@@ -294,17 +306,26 @@ const ignoredLibrariesPrompt = async () => {
 	}
 
 	mainWindow.webContents.send('config-type', db.data().serverType);
-	mainWindow.webContents.send('receive-views', {
-		availableViews: userViews, 
-		ignoredViews: db.data().ignoredViews
-	});
 
-	mainWindow.addListener('close', closeNoExit = (e) => {
-		e.preventDefault();
-		mainWindow.hide();
-		appBarHide(true);
-		mainWindow.removeListener('close', closeNoExit);
-	});
+	const viewData = {
+		availableViews: userViews,
+		ignoredViews: db.data().ignoredViews
+	};
+
+	logger.debug('Sending view data to renderer');
+	logger.debug(viewData);
+
+	mainWindow.webContents.send('receive-views', viewData);
+
+	mainWindow.addListener(
+		'close',
+		(closeNoExit = (e) => {
+			e.preventDefault();
+			mainWindow.hide();
+			appBarHide(true);
+			mainWindow.removeListener('close', closeNoExit);
+		})
+	);
 	// for this window we ignore the event
 
 	appBarHide(false);
@@ -357,6 +378,8 @@ ipcMain.on('config-save', async (_, data) => {
 		);
 
 		await mbc.login();
+
+		logger.debug(data);
 
 		db.write({ ...data, isConfigured: true, doDisplayStatus: true });
 
@@ -435,72 +458,79 @@ const setPresence = async () => {
 		);
 
 		if (session) {
-			const NPItemLibraryID = await mbc.getItemInternalLibraryId(session.NowPlayingItem.Id)
-			if (db.data().ignoredViews.includes(NPItemLibraryID)) return;
+			const NPItem = session.NowPlayingItem;
+
+			const NPItemLibraryID = await mbc.getItemInternalLibraryId(NPItem.Id);
+			if (db.data().ignoredViews.includes(NPItemLibraryID)) {
+				logger.debug(
+					`${NPItem.Name} is in library with ID ${NPItemLibraryID} which is on the ignored library list, will not set status`
+				);
+				if (rpc) rpc.clearActivity();
+				return;
+			}
+
+			logger.debug(session);
 
 			const currentEpochSeconds = new Date().getTime() / 1000;
-
 			const endTimestamp = calcEndTimestamp(session, currentEpochSeconds);
 
-			switch (session.NowPlayingItem.Type) {
+			const defaultProperties = {
+				largeImageKey: 'large',
+				largeImageText: `Watching on ${session.Client}`,
+				smallImageKey: session.PlayState.IsPaused ? 'pause' : 'play',
+				smallImageText: session.PlayState.IsPaused ? 'Paused' : 'Playing',
+				instance: false,
+				endTimestamp: !session.PlayState.IsPaused && endTimestamp
+			};
+
+			switch (NPItem.Type) {
 				case 'Episode':
 					// prettier-ignore
-					const seasonNum = session.NowPlayingItem.ParentIndexNumber.padStart(2, '0');
+					const seasonNum = NPItem.ParentIndexNumber.padStart(2, '0');
 					// prettier-ignore
-					const episodeNum = session.NowPlayingItem.IndexNumber.padStart(2, '0');
+					const episodeNum = NPItem.IndexNumber.padStart(2, '0');
 
 					rpc.setActivity({
-						details: `Watching ${session.NowPlayingItem.SeriesName}`,
-						state: `${
-							session.NowPlayingItem.ParentIndexNumber ? `S${seasonNum}` : ''
-						}${session.NowPlayingItem.IndexNumber ? `E${episodeNum}: ` : ''}${
-							session.NowPlayingItem.Name
-						}`,
-						largeImageKey: 'large',
-						largeImageText: `Watching on ${session.Client}`,
-						smallImageKey: session.PlayState.IsPaused ? 'pause' : 'play',
-						smallImageText: session.PlayState.IsPaused ? 'Paused' : 'Playing',
-						instance: false,
-						endTimestamp: !session.PlayState.IsPaused && endTimestamp
+						details: `Watching ${NPItem.SeriesName}`,
+						state: `${NPItem.ParentIndexNumber ? `S${seasonNum}` : ''}${
+							NPItem.IndexNumber ? `E${episodeNum}: ` : ''
+						}${NPItem.Name}`,
+						...defaultProperties
 					});
 					break;
 				case 'Movie':
 					rpc.setActivity({
 						details: 'Watching a Movie',
-						state: session.NowPlayingItem.Name,
-						largeImageKey: 'large',
-						largeImageText: `Watching on ${session.Client}`,
-						smallImageKey: session.PlayState.IsPaused ? 'pause' : 'play',
-						smallImageText: session.PlayState.IsPaused ? 'Paused' : 'Playing',
-						instance: false,
-						endTimestamp: !session.PlayState.IsPaused && endTimestamp
+						state: NPItem.Name,
+						...defaultProperties
+					});
+					break;
+				case 'MusicVideo':
+					const artists = NPItem.Artists.splice(0, 2);
+					rpc.setActivity({
+						details: `Watching ${NPItem.Name}`,
+						state: `By ${
+							artists.length ? `${artists.join(', ')}` : 'Unknown Artist'
+						}`,
+						...defaultProperties
 					});
 					break;
 				case 'Audio':
 					rpc.setActivity({
-						details: `Listening to ${session.NowPlayingItem.Name}`,
-						state: `By ${session.NowPlayingItem.AlbumArtist}`,
-						largeImageKey: 'large',
-						largeImageText: `Listening on ${session.Client}`,
-						smallImageKey: session.PlayState.IsPaused ? 'pause' : 'play',
-						smallImageText: session.PlayState.IsPaused ? 'Paused' : 'Playing',
-						instance: false,
-						endTimestamp: !session.PlayState.IsPaused && endTimestamp
+						details: `Listening to ${NPItem.Name}`,
+						state: `By ${NPItem.AlbumArtist}`,
+						...defaultProperties
 					});
 					break;
 				default:
 					rpc.setActivity({
 						details: 'Watching Other Content',
-						state: session.NowPlayingItem.Name,
-						largeImageKey: 'large',
-						largeImageText: `Watching on ${session.Client}`,
-						smallImageKey: session.PlayState.IsPaused ? 'pause' : 'play',
-						smallImageText: session.PlayState.IsPaused ? 'Paused' : 'Playing',
-						instance: false,
-						endTimestamp: !session.PlayState.IsPaused && endTimestamp
+						state: NPItem.Name,
+						...defaultProperties
 					});
 			}
 		} else {
+			logger.debug('No session, clearing activity');
 			if (rpc) rpc.clearActivity();
 		}
 	} catch (error) {

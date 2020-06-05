@@ -5,8 +5,14 @@ class JsonDB {
      * 
      * @param {string} _dbfile Path to JsonDB file 
      */
-    constructor(_dbfile) {
-        this.dbfile = _dbfile
+
+     /**
+      * 
+      * @param {object} model DB Model to use 
+      */
+    constructor(_dbfile, model) {
+        this.dbfile = _dbfile;
+        this.model = model;
     }
 
     /**
@@ -16,7 +22,7 @@ class JsonDB {
         if(!fs.existsSync(this.dbfile)) {
             return new Object();
         } else {
-            return JSON.parse(fs.readFileSync(this.dbfile, "utf8"));
+            return this.model(JSON.parse(fs.readFileSync(this.dbfile, "utf8")));
         }
     }
 
@@ -26,7 +32,7 @@ class JsonDB {
      * @returns {void}
      */
     write(data) {
-        fs.writeFileSync(this.dbfile, JSON.stringify({ ...this.data(), ...data }));
+        fs.writeFileSync(this.dbfile, JSON.stringify(this.model({ ...this.data(), ...data })));
     }
 }
 
