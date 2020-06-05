@@ -295,9 +295,7 @@ const ignoredLibrariesPrompt = async () => {
 
 	mainWindow.webContents.send('config-type', db.data().serverType);
 	mainWindow.webContents.send('receive-views', {
-		// undefined is for mixedcontent libraries (which dont have a collection type property for some reason?)
-		// we dont want people to select libraries like playlist and collections since those are virtual libraries and not actual libraries
-		availableViews: userViews.filter(view => view.CollectionType === undefined || !["tvshows", "movies", "homevideos", "music", "musicvideos", "audiobooks"].includes(view.CollectionType)), 
+		availableViews: userViews, 
 		ignoredViews: db.data().ignoredViews
 	});
 
@@ -437,6 +435,9 @@ const setPresence = async () => {
 		);
 
 		if (session) {
+			const NPItemLibraryID = await mbc.getItemInternalLibraryId(session.NowPlayingItem.Id)
+			if (db.data().ignoredViews.includes(NPItemLibraryID)) return;
+
 			const currentEpochSeconds = new Date().getTime() / 1000;
 
 			const endTimestamp = calcEndTimestamp(session, currentEpochSeconds);

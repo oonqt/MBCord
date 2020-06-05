@@ -18,31 +18,22 @@ class MBClient {
 	constructor(serverCredentials, deviceInfo) {
 		Object.assign(this, serverCredentials);
 		Object.assign(this, deviceInfo);
+
+		this.userId;
+		this.accessToken;
+		this.libraryIDCache = {};
+		this.itemLibraryIDCache = {};
 	}
 
 	get serverAddress() {
 		return `${this.protocol}://${this.address}:${this.port}/emby`;
 	}
 
-	/**
-	 * 
-	 * @param {string} itemId ID of the item 
-	 * @returns {Promise<string>} The item ID
-	 */
-	getContainingLibraryId(itemId) {
-		return new Promise((resolve, reject) => {
-			request(`${this.serverAddress}`, {
-				headers: {
-					"X-Emby-Token": this.accessToken
-				},
-				json: true
-			}, (err, res, body) => {
-				if (err) return reject(err);
-				if (res.statusCode !== 200) return reject(`Status: ${res.statusCode} Body: ${res.body}`);
-
-				resolve(); // some id in the body
-			});
-		});
+	get headers() {
+		return {
+			'X-Emby-Token': this.accessToken,
+			'User-Agent': `${this.deviceName}/${this.deviceVersion}`
+		};
 	}
 
 	/**
@@ -53,15 +44,13 @@ class MBClient {
 			request(
 				`${this.serverAddress}/Sessions`,
 				{
-					headers: {
-						'X-Emby-Token': this.accessToken
-                    },
-                    json: true
+					headers: this.headers,
+					json: true
 				},
 				(err, res, body) => {
 					if (err) return reject(err);
 					if (res.statusCode !== 200)
-						return reject(`Status: ${res.statusCode} Body: ${res.body}`);
+						return reject(`Status: ${res.statusCode} Response: ${res.body}`);
 
 					resolve(body);
 				}
@@ -77,9 +66,7 @@ class MBClient {
 			request.post(
 				`${this.serverAddress}/Sessions/Capabilities/Full`,
 				{
-					headers: {
-						'X-Emby-Token': this.accessToken
-					},
+					headers: this.headers,
 					body: {
 						IconUrl: this.iconUrl
 					},
@@ -97,16 +84,59 @@ class MBClient {
 	}
 
 	/**
-	 * @returns {Promise<object>} 
+	 * @param {string} libraryId Library GUID
+	 * @returns {Promise<string>} Internal ID
 	 */
-	getUserViews() {
+	getLibraryInternalId(libraryId) {
 		return new Promise((resolve, reject) => {
+			const cacheResult = this.libraryIDCache[libraryId];
+			if(cacheResult) {
+				resolve(cacheResult);
+			}
+
 			request(
-				`${this.serverAddress}/Users/${this.userId}/views`,
+				`${this.serverAddress}/Users/${this.userId}/Items?Limit=1&ParentId=${libraryId}&Fields=ParentId`,
 				{
-					headers: {
-						'X-Emby-Token': this.accessToken
-					},
+					headers: this.headers,
+					json: true
+				},
+				async (err, res, body) => {
+					if (err) return reject(err);
+					if (res.statusCode !== 200)
+						return reject(`Status: ${res.statusCode} Response: ${body}`);
+
+					// some libraries might have no items
+					if (!body.Items[0]) return resolve(null);
+
+
+					try {
+						// prettier-ignore
+						const LibraryInternalID = await this.getItemInternalLibraryId(body.Items[0].Id);
+						this.libraryIDCache[libraryId] = LibraryInternalID;
+						resolve(LibraryInternalID);
+					} catch (error) {
+						reject(`Failed to get library ID: ${error}`);
+					}
+				}
+			);
+		});
+	}
+
+	/**
+	 * @param {string} itemId ID of the item
+	 * @returns {Promise<string>}
+	 */
+	getItemInternalLibraryId(itemId) {
+		return new Promise((resolve, reject) => {
+			const cacheResult = this.itemLibraryIDCache[itemId];
+			if (cacheResult) {
+				resolve(cacheResult);
+			}
+
+			request(
+				`${this.serverAddress}/Items/${itemId}/Ancestors`,
+				{
+					headers: this.headers,
 					json: true
 				},
 				(err, res, body) => {
@@ -114,18 +144,78 @@ class MBClient {
 					if (res.statusCode !== 200)
 						return reject(`Status: ${res.statusCode} Response: ${body}`);
 
-					resolve(body.Items);
+					// second ancestor is always the library
+					const libraryID = body.splice(body.length - 2, 1)[0].Id;
+					this.itemLibraryIDCache[itemId] = libraryID;
+					resolve(libraryID);
 				}
 			);
 		});
 	}
 
 	/**
-	 * @returns {Promise<string>}
+	 * @returns {Promise<Array<Object>>}
+	 */
+	getUserViews() {
+		return new Promise((resolve, reject) => {
+			request(
+				`${this.serverAddress}/Users/${this.userId}/views`,
+				{
+					headers: this.headers,
+					json: true
+				},
+				async (err, res, body) => {
+					if (err) return reject(err);
+					if (res.statusCode !== 200)
+						return reject(`Status: ${res.statusCode} Response: ${body}`);
+
+					// undefined is for mixedcontent libraries (which dont have a collection type property for some reason?)
+					// we dont want people to select libraries like playlist and collections since those are virtual libraries and not actual libraries
+					const allowedLibraries = body.Items.filter(
+						(view) =>
+							view.CollectionType === undefined ||
+							[
+								'tvshows',
+								'movies',
+								'homevideos',
+								'music',
+								'musicvideos',
+								'audiobooks'
+							].includes(view.CollectionType)
+					);
+
+					const mappedLibraries = [];
+
+					for (const library of allowedLibraries) {
+						try {
+							const internalId = await this.getLibraryInternalId(library.Id);
+
+							// incase the library had no items and we couldnt figure out the ID
+							if (internalId) {
+								mappedLibraries.push({
+									name: library.Name,
+									id: internalId
+								});
+							}
+						} catch (error) {
+							reject(
+								`Interal ID fetch failure: ${error} at library ${library.Name}`
+							);
+						}
+					}
+
+					resolve(mappedLibraries);
+				}
+			);
+		});
+	}
+
+	/**
+	 * @returns {Promise<void>}
 	 */
 	login() {
 		return new Promise((resolve, reject) => {
-            if(this.accessToken) resolve();
+			if (this.accessToken) resolve();
 
 			request.post(
 				`${this.serverAddress}/Users/AuthenticateByName`,
@@ -141,7 +231,8 @@ class MBClient {
 				},
 				async (err, res, body) => {
 					if (err) return reject(err);
-					if (res.statusCode !== 200) return reject(`Status: ${res.statusCode} Reason: ${body}`);
+					if (res.statusCode !== 200)
+						return reject(`Status: ${res.statusCode} Reason: ${body}`);
 
 					this.accessToken = body.AccessToken;
 					this.userId = body.User.Id;
@@ -161,7 +252,7 @@ class MBClient {
 	}
 
 	/**
-	 * @returns {Promise<string>}
+	 * @returns {Promise<void>}
 	 */
 	logout() {
 		return new Promise((resolve) => {
@@ -171,9 +262,7 @@ class MBClient {
 				request.post(
 					`${this.serverAddress}/Sessions/Logout`,
 					{
-						headers: {
-							'X-Emby-Token': this.accessToken
-						}
+						headers: this.headers
 					},
 					() => {
 						// i dont give a FUCK if it doesnt succeed, if it does, it does, if not, fuck it

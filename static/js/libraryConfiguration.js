@@ -4,12 +4,12 @@ ipcRenderer.on('receive-views', (_, views) => {
 	document.getElementById('userViewsList').innerHTML = views.availableViews.map(
 		(view) => `<li class="collection-item">
                         <span class="viewName">
-                            ${view.Name}
+                            ${view.name}
                         </span>
                         <div class="switch">
                             <label>
-                                <span>${views.ignoredViews.includes(view.Id) ? "Ignored" : "Watching"}</span>
-                                <input type="checkbox" class="viewDisableToggle" id="${view.Id}" ${views.ignoredViews.includes(view.Id) && "checked"}>
+                                <span>${views.ignoredViews.includes(view.id) ? "Ignored" : "Watching"}</span>
+                                <input type="checkbox" class="viewDisableToggle" id="${view.id}" ${views.ignoredViews.includes(view.id) && "checked"}>
                                 <span class="lever"></span>
                             </label>
                         </div>
