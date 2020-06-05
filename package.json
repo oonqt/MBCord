@@ -15,6 +15,13 @@
     "build:armv7l": "electron-packager . MBCord --out=build --overwrite --asar --icon=icons/win/icon.ico --platform=linux --arch=armv7l",
     "build:arm64": "electron-packager . MBCord --out=build --overwrite --asar --icon=icons/win/icon.ico --platform=linux --arch=arm64"
   },
+  "prodBuilds": [
+    "build:mac",
+    "build:win64",
+    "build:win32",
+    "build:linux64",
+    "build:linux32"
+  ],
   "author": "oonqt",
   "license": "MIT",
   "devDependencies": {
