@@ -52,17 +52,21 @@ class GithubClient {
 				if (res.statusCode !== 200)
 					cb(`Status: ${res.statusCode} Body: ${body}`);
 
-				const currentVersion = this.constructor.extractVersionAsInt(
-					this.version
-				);
-				const latestVersion = this.constructor.extractVersionAsInt(
-					body.tag_name
-				);
+				// prettier-ignore
+				const currentVersion = this.constructor.extractVersionAsInt(this.version);
+				// prettier-ignore
+				const latestVersion = this.constructor.extractVersionAsInt(body.tag_name);
 
 				if (currentVersion < latestVersion) {
-					cb(null, { pending: true, version: body.tag_name });
+					cb(null, {
+						pending: true,
+						version: body.tag_name
+					});
 				} else {
-					cb(null, { pending: false, version: body.tag_name });
+					cb(null, {
+						pending: false,
+						version: body.tag_name
+					});
 				}
 			}
 		);

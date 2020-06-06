@@ -25,7 +25,10 @@ const {
 	logRetentionCount
 } = require('./config/default.json');
 
-const db = new JsonDB(path.join(app.getPath('userData'), 'config.json'), SettingsModel);
+const db = new JsonDB(
+	path.join(app.getPath('userData'), 'config.json'),
+	SettingsModel
+);
 const startupHandler = new Startup(app);
 const checker = new UpdateChecker(author, name, version);
 
@@ -100,8 +103,6 @@ const startApp = () => {
 		loadConfigurationPage();
 	}
 
-	console.log(db.data())
-
 	// we invoke cheeckForUpdates immediately, so it will check at first application start
 	updateChecker = setInterval(checkForUpdates(), updateCheckInterval);
 };
@@ -162,7 +163,7 @@ const checkForUpdates = (calledFromTray) => {
 		}
 	});
 
-	// we return checkForUpdates because it takes in a function
+	// we return checkForUpdates because setInterval takes in a function
 	return checkForUpdates;
 };
 
@@ -276,8 +277,6 @@ const moveToTray = () => {
 	tray.setToolTip(name);
 	tray.setContextMenu(contextMenu);
 
-	contextMenu.getMenuItemById('log-error').enabled = true
-
 	// ignore the promise
 	// we dont care if the user interacts, we just want the app to start
 	dialog.showMessageBox({
@@ -291,7 +290,7 @@ const moveToTray = () => {
 
 const setLogLevel = (level) => {
 	db.write({ logLevel: level });
-	tray
+	tray;
 	logger.level = level;
 };
 
@@ -469,9 +468,8 @@ const setPresence = async () => {
 
 			const NPItemLibraryID = await mbc.getItemInternalLibraryId(NPItem.Id);
 			if (db.data().ignoredViews.includes(NPItemLibraryID)) {
-				logger.debug(
-					`${NPItem.Name} is in library with ID ${NPItemLibraryID} which is on the ignored library list, will not set status`
-				);
+				// prettier-ignore
+				logger.debug(`${NPItem.Name} is in library with ID ${NPItemLibraryID} which is on the ignored library list, will not set status`);
 				if (rpc) rpc.clearActivity();
 				return;
 			}
