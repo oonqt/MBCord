@@ -85,7 +85,7 @@ const startApp = () => {
 		mainWindow.setMenu(null);
 	}
 
-	seedDB(); // perform migrations and fill in initial data
+	// seedDB(); // perform migrations and fill in initial data
 
 	logger = new Logger(
 		process.defaultApp ? 'console' : 'file',
@@ -101,6 +101,8 @@ const startApp = () => {
 	} else {
 		loadConfigurationPage();
 	}
+
+	console.log(db.data())
 
 	// we invoke cheeckForUpdates immediately, so it will check at first application start
 	updateChecker = setInterval(checkForUpdates(), updateCheckInterval);
@@ -220,24 +222,28 @@ const moveToTray = () => {
 			label: 'Log Level',
 			submenu: [
 				{
+					id: 'log-debug',
 					type: 'checkbox',
 					label: 'debug',
 					click: () => setLogLevel('debug'),
 					checked: logger.level === 'debug'
 				},
 				{
+					id: 'log-info',
 					type: 'checkbox',
 					label: 'info',
 					click: () => setLogLevel('info'),
 					checked: logger.level === 'info'
 				},
 				{
+					id: 'log-warn',
 					type: 'checkbox',
 					label: 'warn',
 					click: () => setLogLevel('warn'),
 					checked: logger.level === 'warn'
 				},
 				{
+					id: 'log-error',
 					type: 'checkbox',
 					label: 'error',
 					click: () => setLogLevel('error'),
@@ -272,6 +278,8 @@ const moveToTray = () => {
 	tray.setToolTip(name);
 	tray.setContextMenu(contextMenu);
 
+	contextMenu.getMenuItemById('log-error').enabled = true
+
 	// ignore the promise
 	// we dont care if the user interacts, we just want the app to start
 	dialog.showMessageBox({
@@ -285,6 +293,7 @@ const moveToTray = () => {
 
 const setLogLevel = (level) => {
 	db.write({ logLevel: level });
+	tray
 	logger.level = level;
 };
 

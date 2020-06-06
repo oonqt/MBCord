@@ -1,6 +1,6 @@
 const { isEmpty } = require('./utils/utils');
 
-const SettingsModel = (
+const SettingsModel = ({
 	doDisplayStatus,
 	serverType,
 	ignoredViews,
@@ -11,9 +11,9 @@ const SettingsModel = (
 	protocol,
 	isConfigured,
 	logLevel
-) => ({
+}) => ({
 	doDisplayStatus: isEmpty(doDisplayStatus) ? '' : doDisplayStatus,
-	serverType: isEmpty(serverType) ? '' : serverType,
+	serverType: isEmpty(serverType) ? 'emby' : serverType,
 	ignoredViews: isEmpty(ignoredViews) ? [] : ignoredViews,
 	serverAddress: isEmpty(serverAddress) ? '' : serverAddress,
 	username: isEmpty(username) ? '' : username,
