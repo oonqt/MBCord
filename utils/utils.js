@@ -17,6 +17,15 @@ exports.calcEndTimestamp = (session, currentEpochSeconds) =>
 	);
 
 /**
+ * 
+ * @param {Object} object the object to scrum
+ * @param {string} keys the keys to filter from the object
+ */
+exports.scrubObject = (object, ...keys) => {
+
+}
+
+/**
  * @param {any} data Data to check for validity
  * @returns {boolean} is the data empty
  */

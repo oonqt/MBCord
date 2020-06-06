@@ -15,7 +15,7 @@ const DiscordRPC = require('discord-rpc');
 const UpdateChecker = require('./utils/UpdateChecker');
 const Logger = require('./utils/logger');
 const SettingsModel = require('./SettingsModel');
-const { calcEndTimestamp } = require('./utils/utils');
+const { calcEndTimestamp, scrubObject } = require('./utils/utils');
 const { version, name, author, homepage } = require('./package.json');
 const {
 	clientIds,
@@ -129,9 +129,11 @@ const resetApp = async () => {
 
 const toggleDisplay = () => {
 	if (db.data().doDisplayStatus) {
+		logger.debug("doDisplayStatus disabled")
 		stopPresenceUpdater();
 		db.write({ doDisplayStatus: false });
 	} else {
+		logger.debug("doDisplayStatus enabled")
 		startPresenceUpdater();
 		db.write({ doDisplayStatus: true });
 	}
@@ -385,9 +387,10 @@ ipcMain.on('config-save', async (_, data) => {
 			}
 		);
 
-		await mbc.login();
+		logger.debug("Attempting to log into server");
+		// SCRUB AND LOG DATA
 
-		logger.debug(data);
+		await mbc.login();
 
 		db.write({ ...data, isConfigured: true, doDisplayStatus: true });
 
@@ -432,6 +435,9 @@ const startPresenceUpdater = async () => {
 			}
 		);
 	}
+
+	logger.debug("Attempting to log into server");
+	// SCRUB AND LOG DATA
 
 	await mbc.login();
 
