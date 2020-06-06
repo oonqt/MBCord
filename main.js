@@ -116,7 +116,9 @@ const loadConfigurationPage = async () => {
 };
 
 const resetApp = async () => {
-	db.write({ isConfigured: false, ignoredViews: [], logLevel: 'info' });
+	const blankSettings = SettingsModel({});
+
+	db.write(blankSettings);
 
 	stopPresenceUpdater();
 
