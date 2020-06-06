@@ -232,7 +232,7 @@ class MBClient {
 				async (err, res, body) => {
 					if (err) return reject(err);
 					if (res.statusCode !== 200)
-						return reject(`Status: ${res.statusCode} Reason: ${body}`);
+						return reject(`Status: ${res.statusCode} Response: ${body}`);
 
 					this.accessToken = body.AccessToken;
 					this.userId = body.User.Id;

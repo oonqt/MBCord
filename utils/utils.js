@@ -22,8 +22,13 @@ exports.calcEndTimestamp = (session, currentEpochSeconds) =>
  * @param {string} keys the keys to filter from the object
  */
 exports.scrubObject = (object, ...keys) => {
-	keys.forEach(key => delete object[key]);
-	return object;
+	const scrubbedObject = {};
+	
+	Object.assign(scrubbedObject, object);
+
+	keys.forEach((key) => delete scrubbedObject[key]);
+
+	return scrubbedObject;
 }
 
 /**
