@@ -85,8 +85,6 @@ const startApp = () => {
 		mainWindow.setMenu(null);
 	}
 
-	// seedDB(); // perform migrations and fill in initial data
-
 	logger = new Logger(
 		process.defaultApp ? 'console' : 'file',
 		app.getPath('userData'),
@@ -577,14 +575,6 @@ const connectRPC = () => {
 			logger.info('Connected to Discord');
 		});
 	});
-};
-
-const seedDB = () => {
-	// prettier-ignore
-	if (db.data().doDisplayStatus === undefined) db.write({ doDisplayStatus: true }); // older releases wont have this , so enable by default
-	if (!db.data().serverType) db.write({ serverType: 'emby' }); // we want emby by default
-	if (!db.data().ignoredViews) db.write({ ignoredViews: [] });
-	if (!db.data().logLevel) db.write({ logLevel: 'info' });
 };
 
 app.on('ready', () => startApp());
