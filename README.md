@@ -6,8 +6,6 @@
 
 ## MBCord is a Discord rich presence client for [Jellyfin](https://jellyfin.org) and [Emby](https://emby.media/)
 
-#### Version 2 is finally here! MANY improvements in here since the original releases
-
 - By default, the plugin is in Emby mode. To switch to jellyfin mode, you must go to the configuration page and click the "Switch to Jellyfin" button in the bottom left.   
     - If you already configured and want to switch to Jellyfin, you can Right Click Tray Icon -> Reset App to return to the configuration page.
 
