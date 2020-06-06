@@ -208,7 +208,7 @@ const moveToTray = () => {
 		},
 		{
 			label: 'Set Ignored Libaries',
-			click: () => ignoredLibrariesPrompt()
+			click: () => loadIgnoredLibrariesPage()
 		},
 		{
 			type: 'separator'
@@ -294,12 +294,12 @@ const setLogLevel = (level) => {
 	logger.level = level;
 };
 
-const ignoredLibrariesPrompt = async () => {
+const loadIgnoredLibrariesPage = async () => {
 	await mainWindow.loadFile(
 		path.join(__dirname, 'static', 'libraryConfiguration.html')
 	);
 
-	mainWindow.setSize(400, 500);
+	mainWindow.setSize(450, 500);
 
 	let userViews;
 

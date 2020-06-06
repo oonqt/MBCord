@@ -10,6 +10,14 @@
     float: right;
 }
 
+.container {
+    text-align: center;
+}
+
+.title {
+    margin-bottom: 15px;
+}
+
 span.viewName {
     white-space: nowrap; 
     overflow: hidden; 
