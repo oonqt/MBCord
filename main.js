@@ -129,11 +129,11 @@ const resetApp = async () => {
 
 const toggleDisplay = () => {
 	if (db.data().doDisplayStatus) {
-		logger.debug("doDisplayStatus disabled")
+		logger.debug('doDisplayStatus disabled');
 		stopPresenceUpdater();
 		db.write({ doDisplayStatus: false });
 	} else {
-		logger.debug("doDisplayStatus enabled")
+		logger.debug('doDisplayStatus enabled');
 		startPresenceUpdater();
 		db.write({ doDisplayStatus: true });
 	}
@@ -387,8 +387,8 @@ ipcMain.on('config-save', async (_, data) => {
 			}
 		);
 
-		logger.debug("Attempting to log into server");
-		// SCRUB AND LOG DATA
+		logger.debug('Attempting to log into server');
+		logger.debug(scrubObject(data, 'username', 'password', 'serverAddress'));
 
 		await mbc.login();
 
@@ -436,8 +436,8 @@ const startPresenceUpdater = async () => {
 		);
 	}
 
-	logger.debug("Attempting to log into server");
-	// SCRUB AND LOG DATA
+	logger.debug('Attempting to log into server');
+	logger.debug(scrubObject(data, 'username', 'password', 'serverAddress'));
 
 	await mbc.login();
 
