@@ -116,7 +116,7 @@ const loadConfigurationPage = async () => {
 };
 
 const resetApp = async () => {
-	const blankSettings = SettingsModel({});
+	const blankSettings = SettingsModel();
 
 	db.write(blankSettings);
 
@@ -388,7 +388,7 @@ ipcMain.on('config-save', async (_, data) => {
 		);
 
 		logger.debug('Attempting to log into server');
-		// logger.debug(scrubObject(data, 'username', 'password', 'serverAddress'));
+		logger.debug(scrubObject(data, 'username', 'password', 'serverAddress', 'port'));
 
 		await mbc.login();
 
@@ -437,7 +437,7 @@ const startPresenceUpdater = async () => {
 	}
 
 	logger.debug('Attempting to log into server');
-	// logger.debug(scrubObject(data, 'username', 'password', 'serverAddress'));
+	logger.debug(scrubObject(data, 'username', 'password', 'serverAddress', 'port'));
 
 	try {
 		await mbc.login();

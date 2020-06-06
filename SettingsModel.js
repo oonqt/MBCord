@@ -11,7 +11,7 @@ const SettingsModel = ({
 	protocol,
 	isConfigured,
 	logLevel
-}) => ({
+} = {}) => ({
 	doDisplayStatus: isEmpty(doDisplayStatus) ? '' : doDisplayStatus,
 	serverType: isEmpty(serverType) ? 'emby' : serverType,
 	ignoredViews: isEmpty(ignoredViews) ? [] : ignoredViews,
