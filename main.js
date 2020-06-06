@@ -491,9 +491,9 @@ const setPresence = async () => {
 			switch (NPItem.Type) {
 				case 'Episode':
 					// prettier-ignore
-					const seasonNum = NPItem.ParentIndexNumber.padStart(2, '0');
+					const seasonNum = NPItem.ParentIndexNumber.toString().padStart(2, '0');
 					// prettier-ignore
-					const episodeNum = NPItem.IndexNumber.padStart(2, '0');
+					const episodeNum = NPItem.IndexNumber.toString().padStart(2, '0');
 
 					rpc.setActivity({
 						details: `Watching ${NPItem.SeriesName}`,
