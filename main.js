@@ -388,7 +388,7 @@ ipcMain.on('config-save', async (_, data) => {
 		);
 
 		logger.debug('Attempting to log into server');
-		logger.debug(scrubObject(data, 'username', 'password', 'serverAddress'));
+		// logger.debug(scrubObject(data, 'username', 'password', 'serverAddress'));
 
 		await mbc.login();
 
@@ -437,20 +437,20 @@ const startPresenceUpdater = async () => {
 	}
 
 	logger.debug('Attempting to log into server');
-	logger.debug(scrubObject(data, 'username', 'password', 'serverAddress'));
+	// logger.debug(scrubObject(data, 'username', 'password', 'serverAddress'));
 
-	await mbc.login();
+	try {
+		await mbc.login();
+	} catch (err) {
+		logger.error("Failed to authenticate");
+		logger.error(err);
+	}
+
 
 	await connectRPC();
 
 	setPresence();
 	presenceUpdate = setInterval(setPresence, 15000);
-
-	try {
-		await mbc.login();
-	} catch (err) {
-		logger.error(`Failed to authenticate: ${err}`);
-	}
 };
 
 const setPresence = async () => {
@@ -464,6 +464,8 @@ const setPresence = async () => {
 		} catch (err) {
 			return logger.error(`Failed to get sessions: ${err}`);
 		}
+
+		// logger.debug()
 
 		const session = sessions.find(
 			(session) =>
