@@ -500,7 +500,7 @@ const setPresence = async () => {
 
 			const defaultProperties = {
 				largeImageKey: 'large',
-				largeImageText: `Watching on ${session.Client}`,
+				largeImageText: `${NPItem.Type === "Audio" ? "Listening" : "Watching"} on ${session.Client}`,
 				smallImageKey: session.PlayState.IsPaused ? 'pause' : 'play',
 				smallImageText: session.PlayState.IsPaused ? 'Paused' : 'Playing',
 				instance: false,
