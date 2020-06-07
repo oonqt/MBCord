@@ -90,7 +90,7 @@ const startApp = () => {
 
 	logger = new Logger(
 		process.defaultApp ? 'console' : 'file',
-		path.join(app.getPath('userData'), "logs"),
+		path.join(app.getPath('userData'), 'logs'),
 		logRetentionCount,
 		name,
 		db.data().logLevel
@@ -388,7 +388,9 @@ ipcMain.on('config-save', async (_, data) => {
 		);
 
 		logger.debug('Attempting to log into server');
-		logger.debug(scrubObject(data, 'username', 'password', 'serverAddress', 'port'));
+		logger.debug(
+			scrubObject(data, 'username', 'password', 'serverAddress', 'port')
+		);
 
 		await mbc.login();
 
@@ -437,15 +439,16 @@ const startPresenceUpdater = async () => {
 	}
 
 	logger.debug('Attempting to log into server');
-	logger.debug(scrubObject(data, 'username', 'password', 'serverAddress', 'port'));
+	logger.debug(
+		scrubObject(data, 'username', 'password', 'serverAddress', 'port')
+	);
 
 	try {
 		await mbc.login();
 	} catch (err) {
-		logger.error("Failed to authenticate");
+		logger.error('Failed to authenticate');
 		logger.error(err);
 	}
-
 
 	await connectRPC();
 
@@ -464,8 +467,6 @@ const setPresence = async () => {
 		} catch (err) {
 			return logger.error(`Failed to get sessions: ${err}`);
 		}
-
-		// logger.debug()
 
 		const session = sessions.find(
 			(session) =>
@@ -488,6 +489,14 @@ const setPresence = async () => {
 
 			const currentEpochSeconds = new Date().getTime() / 1000;
 			const endTimestamp = calcEndTimestamp(session, currentEpochSeconds);
+			// use endTimestamp to calculate an automatic timeout to set the status so there is less of a delay
+
+			logger.debug(`${endTimestamp - currentEpochSeconds}`);
+
+			setTimeout(
+				setPresence,
+				(endTimestamp - currentEpochSeconds) * 1000 + 1500
+			);
 
 			const defaultProperties = {
 				largeImageKey: 'large',
