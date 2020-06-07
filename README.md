@@ -4,10 +4,6 @@
 
 ## MBCord is a Discord rich presence client for [Jellyfin](https://jellyfin.org) and [Emby](https://emby.media/)
 
-## Version 2 is here! [Check it out!](https://github.com/oonqt/MBCord/releases)
-
-## New user or existing user? [Check out the wiki!](https://github.com/oonqt/MBCord/wiki)
-
 ## A star ✨ on the repository is always appreciated!
 
 ![Jellyfin](https://i.memester.xyz/u/l1d.png)
