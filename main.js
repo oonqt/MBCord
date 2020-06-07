@@ -90,7 +90,7 @@ const startApp = () => {
 
 	logger = new Logger(
 		process.defaultApp ? 'console' : 'file',
-		app.getPath('userData'),
+		path.join(app.getPath('userData'), "logs"),
 		logRetentionCount,
 		name,
 		db.data().logLevel
