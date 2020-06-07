@@ -20,7 +20,7 @@ class JsonDB {
 	 */
 	data() {
 		if (!fs.existsSync(this.dbfile)) {
-			return new Object();
+			return this.model();
 		} else {
 			return this.model(JSON.parse(fs.readFileSync(this.dbfile, 'utf8')));
 		}
