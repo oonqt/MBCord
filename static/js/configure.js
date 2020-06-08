@@ -67,3 +67,5 @@ ipcRenderer.on('config-type', (_, data) => {
 			break;
 	}
 });
+
+ipcRenderer.send("receive-data");

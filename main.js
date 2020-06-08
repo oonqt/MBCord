@@ -31,11 +31,13 @@ const db = new JsonDB(
 );
 const startupHandler = new Startup(app);
 const checker = new UpdateChecker(author, name, version);
-
-/**
- * @type {Logger}
- */
-let logger;
+const logger = new Logger(
+	process.defaultApp ? 'console' : 'file',
+	path.join(app.getPath('userData'), 'logs'),
+	logRetentionCount,
+	name,
+	db.data().logLevel
+);
 
 /**
  * @type {BrowserWindow}
@@ -88,14 +90,6 @@ const startApp = () => {
 		mainWindow.setMenu(null);
 	}
 
-	logger = new Logger(
-		process.defaultApp ? 'console' : 'file',
-		path.join(app.getPath('userData'), 'logs'),
-		logRetentionCount,
-		name,
-		db.data().logLevel
-	);
-
 	if (db.data().isConfigured) {
 		moveToTray();
 		startPresenceUpdater();
@@ -110,7 +104,6 @@ const startApp = () => {
 const loadConfigurationPage = async () => {
 	mainWindow.setSize(480, 310);
 	await mainWindow.loadFile(path.join(__dirname, 'static', 'configure.html'));
-	mainWindow.webContents.send('config-type', db.data().serverType);
 
 	appBarHide(false);
 };
@@ -298,34 +291,12 @@ const setLogLevel = (level) => {
 	logger.level = level;
 };
 
-const loadIgnoredLibrariesPage = async () => {
-	await mainWindow.loadFile(
+const loadIgnoredLibrariesPage = () => {
+ 	mainWindow.loadFile(
 		path.join(__dirname, 'static', 'libraryConfiguration.html')
 	);
 
 	mainWindow.setSize(450, 500);
-
-	let userViews;
-
-	try {
-		userViews = await mbc.getUserViews();
-	} catch (err) {
-		dialog.showErrorBox(name, 'Failed to fetch libraries for your user');
-		logger.error(err);
-		return;
-	}
-
-	mainWindow.webContents.send('config-type', db.data().serverType);
-
-	const viewData = {
-		availableViews: userViews,
-		ignoredViews: db.data().ignoredViews
-	};
-
-	logger.debug('Sending view data to renderer');
-	logger.debug(viewData);
-
-	mainWindow.webContents.send('receive-views', viewData);
 
 	mainWindow.addListener(
 		'close',
@@ -500,7 +471,9 @@ const setPresence = async () => {
 
 			const defaultProperties = {
 				largeImageKey: 'large',
-				largeImageText: `${NPItem.Type === "Audio" ? "Listening" : "Watching"} on ${session.Client}`,
+				largeImageText: `${
+					NPItem.Type === 'Audio' ? 'Listening' : 'Watching'
+				} on ${session.Client}`,
 				smallImageKey: session.PlayState.IsPaused ? 'pause' : 'play',
 				smallImageText: session.PlayState.IsPaused ? 'Paused' : 'Playing',
 				instance: false,
@@ -593,5 +566,32 @@ const connectRPC = () => {
 		});
 	});
 };
+
+ipcMain.on('receive-views', async (event) => {
+	let userViews;
+
+	try {
+		userViews = await mbc.getUserViews();
+	} catch (err) {
+		event.reply('fetch-failed');
+		dialog.showErrorBox(name, 'Failed to fetch libraries for your user');
+		logger.error(err);
+		return;
+	}
+
+	const viewData = {
+		availableViews: userViews,
+		ignoredViews: db.data().ignoredViews
+	};
+
+	logger.debug('Sending view data to renderer');
+	logger.debug(viewData);
+
+	event.reply('receive-views', viewData);
+});
+
+ipcMain.on('receive-data', (event) => {
+	event.reply('config-type', db.data().serverType);
+});
 
 app.on('ready', () => startApp());

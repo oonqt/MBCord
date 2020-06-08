@@ -1,39 +1,71 @@
 * {
-  user-select: none;
+	user-select: none;
 }
 
 .lever {
-    margin-bottom: 5px;
+	margin-bottom: 5px;
+}
+
+#retry {
+	display: none;
+	width: 100%;
+	margin-top: 15px;
+}
+
+.viewsContainer {
+    display: none;
 }
 
 .switch {
-    float: right;
+	float: right;
 }
 
 .container {
-    text-align: center;
+	text-align: center;
 }
 
 .title {
-    margin-bottom: 15px;
+	margin-bottom: 15px;
 }
 
 span.viewName {
-    white-space: nowrap; 
-    overflow: hidden; 
-    text-overflow: ellipsis;
-    display: inline-block; 
-    width: calc(60%);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: inline-block;
+	width: calc(60%);
 }
 
-.switch label input[type=checkbox]:checked+.lever:after {
-    background-color: var(--color);
+.switch label input[type='checkbox']:checked + .lever:after {
+	background-color: var(--color);
 }
 
-.switch label input[type=checkbox]:checked+.lever {
-    background-color: var(--color-accent);
+.switch label input[type='checkbox']:checked + .lever {
+	background-color: var(--color-accent);
 }
 
 .switch label .lever:before {
-    background-color: var(--color-accent);
+	background-color: var(--color-accent);
+}
+
+.btn,
+.btn:hover,
+.btn:focus {
+  background-color: var(--color);
+}
+
+.progress .indeterminate {
+	background-color: var(--color) !important;
+}
+
+.progress {
+	background-color: var(--color-accent);
+}
+
+#reload > i {
+	color: var(--color);
+}
+
+#reload:hover {
+	background-color: transparent !important;
 }

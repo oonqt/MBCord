@@ -4,18 +4,36 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+        <link rel="stylesheet" href="../node_modules/material-icons/css/material-icons.min.css">
         <link rel="stylesheet" href="../node_modules/materialize-css/dist/css/materialize.min.css">
-        <link rel="stylesheet" href="css/libraryConfiguration.css"></head>
-        <body>
-            
-            <div class="container">
-                <h5 class="title">Ignored Libraries</h5>
+        <link rel="stylesheet" href="css/libraryConfiguration.css">
+    </head>
+    <body>
+        <div class="container">
+            <div class="progress">
+                <div class="indeterminate"></div>
+            </div>
+
+            <button id="retry" class="waves-effect waves-light btn">
+                Retry
+                <i class="material-icons right">refresh</i>
+            </button>
+
+            <div class="viewsContainer">
+                <h5 class="title">
+                    Ignored Libraries
+                    <button id="reload" class="btn-flat waves-effect btn-floating">
+                        <i class="material-icons">refresh</i>
+                    </button>
+                </h5>
 
                 <ul id="userViewsList" class="collection"></ul>
             </div>
+        </div>
 
-            <script src="../node_modules/materialize-css/dist/js/materialize.min.js"></script>
-            <script src="js/themeProvider.js"></script>
-            <script src="js/libraryConfiguration.js"></script>
-        </body>
+        <script src="../node_modules/materialize-css/dist/js/materialize.min.js"></script>
+        <script src="js/themeProvider.js"></script>
+        <script src="js/libraryConfiguration.js"></script>
+    </body>
 </html>
