@@ -1,1 +1,2 @@
 * Switch frontend to ReactJS & Material-UI (considering)
+* Server auto detection

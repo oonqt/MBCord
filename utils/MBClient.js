@@ -90,7 +90,7 @@ class MBClient {
 	getLibraryInternalId(libraryId) {
 		return new Promise((resolve, reject) => {
 			const cacheResult = this.libraryIDCache[libraryId];
-			if(cacheResult) {
+			if (cacheResult) {
 				resolve(cacheResult);
 			}
 
@@ -108,7 +108,6 @@ class MBClient {
 					// some libraries might have no items
 					if (!body.Items[0]) return resolve(null);
 
-
 					try {
 						// prettier-ignore
 						const LibraryInternalID = await this.getItemInternalLibraryId(body.Items[0].Id);
@@ -117,6 +116,25 @@ class MBClient {
 					} catch (error) {
 						reject(`Failed to get library ID: ${error}`);
 					}
+				}
+			);
+		});
+	}
+
+	getSystemInfo() {
+		return new Promise((resolve, reject) => {
+			request(
+				`${this.serverAddress}/System/Info`,
+				{
+					headers: this.headers,
+					json: true
+				},
+				(err, res, body) => {
+					if (err) return reject(err);
+					if (res.statusCode !== 200)
+						return reject(`Status: ${res.statusCode} Response: ${body}`);
+
+					resolve(body);
 				}
 			);
 		});
