@@ -26,7 +26,10 @@ document.getElementById('serverType').addEventListener('click', function () {
 	const current = getComputedStyle(root).getPropertyValue('--color');
 
 	if (current === colors.embyTheme.solid) {
-		document.documentElement.style.setProperty('--color', colors.jellyfinTheme.solid);
+		document.documentElement.style.setProperty(
+			'--color',
+			colors.jellyfinTheme.solid
+		);
 		this.textContent = 'Switch to Emby?';
 		ipcRenderer.send('theme-change', 'jellyfin');
 	} else {
@@ -48,8 +51,35 @@ ipcRenderer.on('validation-error', (_, data) => {
 });
 
 ipcRenderer.on('server-discovery', (_, data) => {
-	if(data.length) {
-		
+	if (data.length) {
+		// prettier-ignore
+		const serverDiscoveryModal = document.getElementById('serverDiscoveryModal');
+
+		const modalInstance = M.Modal.getInstance(serverDiscoveryModal);
+		modalInstance.open();
+
+		const serverList = serverDiscoveryModal.querySelector("#servers");
+		serverList.innerHTML = data
+			.map((server) => `<option value="${server.name}">${server.name.trim()}</option>`)
+			.join('');
+		M.FormSelect.init(serverList);
+
+		serverDiscoveryModal.querySelector('#notFound').addEventListener('click', () => {
+			modalInstance.close();
+		})
+
+		serverDiscoveryModal.querySelector('form').addEventListener('submit', e => {
+			e.preventDefault();
+
+			const serverName = serverDiscoveryModal.querySelector('#servers').value;
+			const server = data.find(server => server.name === serverName);
+
+			document.getElementById('serverAddress').value = server.address;
+			document.getElementById('protocol').value = server.protocol;
+			document.getElementById('port').value = server.port;
+
+			modalInstance.close();
+		});
 	}
 });
 
@@ -74,4 +104,4 @@ ipcRenderer.on('config-type', (_, data) => {
 	}
 });
 
-ipcRenderer.send("receive-data");
+ipcRenderer.send('receive-data');

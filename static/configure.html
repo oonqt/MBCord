@@ -9,7 +9,24 @@
     <link rel="stylesheet" href="css/configure.css">
 </head>
 <body>
-    
+    <div class="modal" id="serverDiscoveryModal">
+        <div class="modal-content">
+            <h5 class="modal-title">We've autodetected some servers</h5>
+            <form id="modalForm">
+                <div class="row">
+                    <select id="servers"></select>
+                </div>
+                <div class="button-row row">
+                    <div class="left-button col s6">
+                        <button class="btn waves-effect waves-light" type="submit">Enter</button>
+                    </div>
+                    <div class="right-button col s6">
+                        <button class="btn waves-effect waves-light" id="notFound">I don't see mine</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <div class="container">
         <h5 class="title">Let's get you set up</h5>
@@ -59,8 +76,11 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const elems = document.querySelectorAll('select');
-            M.FormSelect.init(elems);
+            const select = document.getElementById('protocol');
+            M.FormSelect.init(select);
+
+            const modals = document.querySelectorAll('.modal');
+            M.Modal.init(modals);
         });
     </script>
 </body>
