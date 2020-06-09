@@ -6,6 +6,14 @@
   text-align: center;
 }
 
+.content {
+  display: none;
+}
+
+.splashScreen {
+  margin-top: 25px;
+}
+
 .row {
   margin: 0;
 }

@@ -102,14 +102,10 @@ const startApp = () => {
 	updateChecker = setInterval(checkForUpdates(), updateCheckInterval);
 };
 
-const loadConfigurationPage = async () => {
+const loadConfigurationPage = () => {
 	mainWindow.setSize(480, 310);
-
-	const servers = await serverDiscoveryClient.find(2500);
-	logger.debug(`Server discovery result: ${JSON.stringify(servers)}`);
 	
-	await mainWindow.loadFile(path.join(__dirname, 'static', 'configure.html'));
-	mainWindow.webContents.send('server-discovery', servers);
+	mainWindow.loadFile(path.join(__dirname, 'static', 'configure.html'));
 
 	appBarHide(false);
 };
@@ -598,6 +594,12 @@ ipcMain.on('receive-views', async (event) => {
 
 ipcMain.on('receive-data', (event) => {
 	event.reply('config-type', db.data().serverType);
+});
+
+ipcMain.on('receive-servers', async (event) => {
+	const servers = await serverDiscoveryClient.find(2500);
+	logger.debug(`Server discovery result: ${JSON.stringify(servers)}`);
+	event.reply('receive-servers', servers);
 });
 
 app.on('ready', () => startApp());

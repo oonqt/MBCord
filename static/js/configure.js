@@ -50,7 +50,10 @@ ipcRenderer.on('validation-error', (_, data) => {
 	});
 });
 
-ipcRenderer.on('server-discovery', (_, data) => {
+ipcRenderer.on('receive-servers', (_, data) => {
+	document.querySelector('.splashScreen').style.display = 'none';
+	document.querySelector('.content').style.display = 'block';
+
 	if (data.length) {
 		// prettier-ignore
 		const serverDiscoveryModal = document.getElementById('serverDiscoveryModal');
@@ -105,3 +108,4 @@ ipcRenderer.on('config-type', (_, data) => {
 });
 
 ipcRenderer.send('receive-data');
+ipcRenderer.send('receive-servers');
