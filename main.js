@@ -103,9 +103,8 @@ const startApp = () => {
 };
 
 const loadConfigurationPage = () => {
-	mainWindow.setSize(480, 310);
-	
 	mainWindow.loadFile(path.join(__dirname, 'static', 'configure.html'));
+	mainWindow.setSize(480, 310);
 
 	appBarHide(false);
 };
@@ -276,8 +275,7 @@ const moveToTray = () => {
 		},
 		{
 			type: 'normal',
-			label: `Version ${version}`,
-			id: 'see',
+			label: `${name} v${version}`,
 			enabled: false
 		}
 	]);
