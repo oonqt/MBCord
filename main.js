@@ -197,7 +197,7 @@ const moveToTray = () => {
 			type: 'checkbox',
 			label: 'Run at Startup',
 			click: () => startupHandler.toggle(),
-			checked: startupHandler.isEnabled
+			checked: startupHandler.isEnabled,
 		},
 		{
 			type: 'checkbox',
@@ -270,14 +270,21 @@ const moveToTray = () => {
 		{
 			label: 'Quit',
 			role: 'quit'
+		},
+		{
+			type: 'separator',
+		},
+		{
+			type: 'normal',
+			label: `Version ${version}`,
+			id: 'see',
+			enabled: false
 		}
 	]);
 
 	tray.setToolTip(name);
 	tray.setContextMenu(contextMenu);
-
-	appBarHide(true);
-
+	
 	// ignore the promise
 	// we dont care if the user interacts, we just want the app to start
 	dialog.showMessageBox({
@@ -285,6 +292,8 @@ const moveToTray = () => {
 		title: name,
 		message: `${name} has been minimized to the tray`
 	});
+
+	appBarHide(true);
 };
 
 const setLogLevel = (level) => {
