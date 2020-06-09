@@ -14,6 +14,7 @@ const MBClient = require('./utils/MBClient');
 const DiscordRPC = require('discord-rpc');
 const UpdateChecker = require('./utils/UpdateChecker');
 const Logger = require('./utils/logger');
+const serverDiscoveryClient = require('./utils/ServerDiscoveryClient');
 const SettingsModel = require('./SettingsModel');
 const { calcEndTimestamp, scrubObject } = require('./utils/utils');
 const { version, name, author, homepage } = require('./package.json');
@@ -103,7 +104,12 @@ const startApp = () => {
 
 const loadConfigurationPage = async () => {
 	mainWindow.setSize(480, 310);
+
+	const servers = await serverDiscoveryClient.find(2500);
+	logger.debug(`Server discovery result: ${JSON.stringify(servers)}`);
+	
 	await mainWindow.loadFile(path.join(__dirname, 'static', 'configure.html'));
+	mainWindow.webContents.send('server-discovery', servers);
 
 	appBarHide(false);
 };
@@ -292,7 +298,7 @@ const setLogLevel = (level) => {
 };
 
 const loadIgnoredLibrariesPage = () => {
- 	mainWindow.loadFile(
+	mainWindow.loadFile(
 		path.join(__dirname, 'static', 'libraryConfiguration.html')
 	);
 
@@ -341,34 +347,29 @@ ipcMain.on('config-save', async (_, data) => {
 		return;
 	}
 
+	mbc = new MBClient(
+		{
+			address: data.serverAddress,
+			username: data.username,
+			password: data.password,
+			protocol: data.protocol,
+			port: data.port
+		},
+		{
+			deviceName: name,
+			deviceId: UUID,
+			deviceVersion: version,
+			iconUrl: iconUrl
+		}
+	);
+
+	logger.debug('Attempting to log into server');
+	logger.debug(
+		scrubObject(data, 'username', 'password', 'serverAddress', 'port')
+	);
+
 	try {
-		mbc = new MBClient(
-			{
-				address: data.serverAddress,
-				username: data.username,
-				password: data.password,
-				protocol: data.protocol,
-				port: data.port
-			},
-			{
-				deviceName: name,
-				deviceId: UUID,
-				deviceVersion: version,
-				iconUrl: iconUrl
-			}
-		);
-
-		logger.debug('Attempting to log into server');
-		logger.debug(
-			scrubObject(data, 'username', 'password', 'serverAddress', 'port')
-		);
-
 		await mbc.login();
-
-		db.write({ ...data, isConfigured: true, doDisplayStatus: true });
-
-		moveToTray();
-		startPresenceUpdater();
 	} catch (error) {
 		logger.error(error);
 		dialog.showMessageBox(mainWindow, {
@@ -377,6 +378,11 @@ ipcMain.on('config-save', async (_, data) => {
 			detail: 'Invalid server address or login credentials'
 		});
 	}
+
+	db.write({ ...data, isConfigured: true, doDisplayStatus: true });
+
+	moveToTray();
+	startPresenceUpdater();
 });
 
 const stopPresenceUpdater = async () => {

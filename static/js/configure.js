@@ -47,6 +47,12 @@ ipcRenderer.on('validation-error', (_, data) => {
 	});
 });
 
+ipcRenderer.on('server-discovery', (_, data) => {
+	if(data.length) {
+		
+	}
+});
+
 ipcRenderer.on('config-type', (_, data) => {
 	const serverType = document.getElementById('serverType');
 
