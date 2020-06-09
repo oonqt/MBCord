@@ -80,7 +80,7 @@ const startApp = () => {
 
 	// only allow one instance
 	const isLocked = app.requestSingleInstanceLock();
-	if (!isLocked) app.quit();
+	if (!isLocked) return app.quit();
 
 	// is production?
 	if (process.defaultApp) {
