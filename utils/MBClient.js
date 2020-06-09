@@ -88,6 +88,7 @@ class MBClient {
 	 * @returns {Promise<string>} Internal ID
 	 */
 	getLibraryInternalId(libraryId) {
+		// we have to do all this fucking bullshit just to get the library ID 
 		return new Promise((resolve, reject) => {
 			const cacheResult = this.libraryIDCache[libraryId];
 			if (cacheResult) {

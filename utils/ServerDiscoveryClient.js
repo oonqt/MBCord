@@ -8,7 +8,7 @@ exports.find = (timeoutMs) =>
 		const servers = [];
 		const client = dgram.createSocket({ type: 'udp4', reuseAddr: true });
 
-		client.bind();
+		client.bind(); // not to be confused with function.bind(this, etcetcsfuck)
 
 		client.on('listening', () => {
 			const message = Buffer.from('who is EmbyServer?');
@@ -28,10 +28,12 @@ exports.find = (timeoutMs) =>
 
 		client.on('message', (message, info) => {
 			if (info) {
+				// message is a buffer
 				const response = JSON.parse(message.toString());
 				const addressData = response.Address.split(':');
 
 				const server = {
+					fullAddress: response.Address,
 					address: addressData[1].slice(2, addressData[1].length),
 					port: addressData[2],
 					protocol: addressData[0],

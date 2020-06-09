@@ -63,7 +63,7 @@ ipcRenderer.on('receive-servers', (_, data) => {
 
 		const serverList = serverDiscoveryModal.querySelector("#servers");
 		serverList.innerHTML = data
-			.map((server) => `<option value="${server.name}">${server.name.trim()}</option>`)
+			.map((server) => `<option value="${server.name}">${server.name.trim()} - ${server.fullAddress}</option>`)
 			.join('');
 		M.FormSelect.init(serverList);
 
@@ -78,7 +78,6 @@ ipcRenderer.on('receive-servers', (_, data) => {
 			const server = data.find(server => server.name === serverName);
 
 			document.getElementById('serverAddress').value = server.address;
-			document.getElementById('protocol').value = server.protocol;
 			document.getElementById('port').value = server.port;
 
 			modalInstance.close();
