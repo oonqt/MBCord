@@ -24,7 +24,7 @@
   "author": "oonqt",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^9.0.0",
+    "electron": "^9.0.3",
     "electron-installer-zip": "^0.1.2",
     "electron-packager": "^14.0.5",
     "rimraf": "^3.0.2"

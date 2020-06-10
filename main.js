@@ -92,6 +92,10 @@ const startApp = () => {
 	}
 
 	if (db.data().isConfigured) {
+<<<<<<< HEAD
+=======
+		moveToTray(true);
+>>>>>>> 87633bf44cf484fdc9671dda57f558054ba5c8ed
 		startPresenceUpdater();
 		moveToTray();
 	} else {
@@ -186,7 +190,22 @@ const appBarHide = (doHide) => {
 	mainWindow.setSkipTaskbar(doHide);
 };
 
+<<<<<<< HEAD
 const moveToTray = () => {
+=======
+ipcMain.on('theme-change', (_, data) => {
+	switch (data) {
+		case 'jellyfin':
+			db.write({ serverType: 'jellyfin' });
+			break;
+		case 'emby':
+			db.write({ serverType: 'emby' });
+			break;
+	}
+});
+
+const moveToTray = (silent) => {
+>>>>>>> 87633bf44cf484fdc9671dda57f558054ba5c8ed
 	tray = new Tray(path.join(__dirname, 'icons', 'tray.png'));
 
 	const contextMenu = Menu.buildFromTemplate([
@@ -280,6 +299,7 @@ const moveToTray = () => {
 
 	tray.setToolTip(name);
 	tray.setContextMenu(contextMenu);
+<<<<<<< HEAD
 
 	// ignore the promise
 	// we dont care if the user interacts, we just want the app to start
@@ -288,6 +308,18 @@ const moveToTray = () => {
 		title: name,
 		message: `${name} has been minimized to the tray`
 	});
+=======
+	
+	if(silent) {
+		// ignore the promise
+		// we dont care if the user interacts, we just want the app to start
+		dialog.showMessageBox({
+			type: 'info',
+			title: name,
+			message: `${name} has been minimized to the tray`
+		});
+	}
+>>>>>>> 87633bf44cf484fdc9671dda57f558054ba5c8ed
 
 	appBarHide(true);
 };
