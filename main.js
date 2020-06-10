@@ -92,7 +92,7 @@ const startApp = () => {
 	}
 
 	if (db.data().isConfigured) {
-		moveToTray();
+		moveToTray(true);
 		startPresenceUpdater();
 	} else {
 		loadConfigurationPage();
@@ -189,7 +189,7 @@ ipcMain.on('theme-change', (_, data) => {
 	}
 });
 
-const moveToTray = () => {
+const moveToTray = (silent) => {
 	tray = new Tray(path.join(__dirname, 'icons', 'tray.png'));
 
 	const contextMenu = Menu.buildFromTemplate([
@@ -285,13 +285,15 @@ const moveToTray = () => {
 	tray.setToolTip(name);
 	tray.setContextMenu(contextMenu);
 	
-	// ignore the promise
-	// we dont care if the user interacts, we just want the app to start
-	dialog.showMessageBox({
-		type: 'info',
-		title: name,
-		message: `${name} has been minimized to the tray`
-	});
+	if(silent) {
+		// ignore the promise
+		// we dont care if the user interacts, we just want the app to start
+		dialog.showMessageBox({
+			type: 'info',
+			title: name,
+			message: `${name} has been minimized to the tray`
+		});
+	}
 
 	appBarHide(true);
 };
