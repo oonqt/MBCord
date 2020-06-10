@@ -92,14 +92,14 @@ const startApp = () => {
 	}
 
 	if (db.data().isConfigured) {
-		moveToTray();
 		startPresenceUpdater();
+		moveToTray();
 	} else {
 		loadConfigurationPage();
 	}
 
-	// we invoke cheeckForUpdates immediately, so it will check at first application start
-	updateChecker = setInterval(checkForUpdates(), updateCheckInterval);
+	checkForUpdates();
+	updateChecker = setInterval(checkForUpdates, updateCheckInterval);
 };
 
 const loadConfigurationPage = () => {
@@ -135,7 +135,16 @@ const toggleDisplay = () => {
 
 const checkForUpdates = (calledFromTray) => {
 	checker.checkForUpdate((err, data) => {
-		if (err) return logger.error(err);
+		if (err) {
+			if (calledFromTray) {
+				dialog.showMessageBox({
+					title: name,
+					message: 'Failed to check for updates',
+					detail: 'Please try again later',
+				});
+			}
+			return logger.error(err);
+		}
 
 		if (data.pending) {
 			if (!calledFromTray) clearInterval(updateChecker);
@@ -155,14 +164,14 @@ const checkForUpdates = (calledFromTray) => {
 			);
 		} else if (calledFromTray) {
 			dialog.showMessageBox({
+				title: name,
 				type: 'info',
 				message: 'There are no new versions available to download'
 			});
 		}
 	});
 
-	// we return checkForUpdates because setInterval takes in a function
-	return checkForUpdates;
+	return;
 };
 
 const appBarHide = (doHide) => {
@@ -177,17 +186,6 @@ const appBarHide = (doHide) => {
 	mainWindow.setSkipTaskbar(doHide);
 };
 
-ipcMain.on('theme-change', (_, data) => {
-	switch (data) {
-		case 'jellyfin':
-			db.write({ serverType: 'jellyfin' });
-			break;
-		case 'emby':
-			db.write({ serverType: 'emby' });
-			break;
-	}
-});
-
 const moveToTray = () => {
 	tray = new Tray(path.join(__dirname, 'icons', 'tray.png'));
 
@@ -196,7 +194,7 @@ const moveToTray = () => {
 			type: 'checkbox',
 			label: 'Run at Startup',
 			click: () => startupHandler.toggle(),
-			checked: startupHandler.isEnabled,
+			checked: startupHandler.isEnabled
 		},
 		{
 			type: 'checkbox',
@@ -271,7 +269,7 @@ const moveToTray = () => {
 			role: 'quit'
 		},
 		{
-			type: 'separator',
+			type: 'separator'
 		},
 		{
 			type: 'normal',
@@ -282,7 +280,7 @@ const moveToTray = () => {
 
 	tray.setToolTip(name);
 	tray.setContextMenu(contextMenu);
-	
+
 	// ignore the promise
 	// we dont care if the user interacts, we just want the app to start
 	dialog.showMessageBox({
@@ -380,6 +378,7 @@ ipcMain.on('config-save', async (_, data) => {
 			title: name,
 			detail: 'Invalid server address or login credentials'
 		});
+		return;
 	}
 
 	db.write({ ...data, isConfigured: true, doDisplayStatus: true });
@@ -575,6 +574,17 @@ const connectRPC = () => {
 		});
 	});
 };
+
+ipcMain.on('theme-change', (_, data) => {
+	switch (data) {
+		case 'jellyfin':
+			db.write({ serverType: 'jellyfin' });
+			break;
+		case 'emby':
+			db.write({ serverType: 'emby' });
+			break;
+	}
+});
 
 ipcMain.on('receive-views', async (event) => {
 	let userViews;

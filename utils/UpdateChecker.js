@@ -48,9 +48,10 @@ class GithubClient {
 				json: true
 			},
 			(err, res, body) => {
-				if (err) cb(err, null);
+				return cb("anError");
+				if (err) return cb(err, null);
 				if (res.statusCode !== 200)
-					cb(`Status: ${res.statusCode} Body: ${body}`);
+					return cb(`Status: ${res.statusCode} Body: ${body}`);
 
 				// prettier-ignore
 				const currentVersion = this.constructor.extractVersionAsInt(this.version);
