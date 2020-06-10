@@ -92,12 +92,8 @@ const startApp = () => {
 	}
 
 	if (db.data().isConfigured) {
-<<<<<<< HEAD
-=======
-		moveToTray(true);
->>>>>>> 87633bf44cf484fdc9671dda57f558054ba5c8ed
 		startPresenceUpdater();
-		moveToTray();
+		moveToTray(true);
 	} else {
 		loadConfigurationPage();
 	}
@@ -137,17 +133,24 @@ const toggleDisplay = () => {
 	}
 };
 
+setInterval(() => {
+	console.log('fuck off piece of fucking shit');
+}, 2500)
+
 const checkForUpdates = (calledFromTray) => {
 	checker.checkForUpdate((err, data) => {
 		if (err) {
+			console.log('fuck')
 			if (calledFromTray) {
-				dialog.showMessageBox({
+				dialog.showMessageBoxSync({
 					title: name,
+					type: 'error',
 					message: 'Failed to check for updates',
 					detail: 'Please try again later',
 				});
 			}
-			return logger.error(err);
+			logger.error(err);
+			return;
 		}
 
 		if (data.pending) {
@@ -174,8 +177,6 @@ const checkForUpdates = (calledFromTray) => {
 			});
 		}
 	});
-
-	return;
 };
 
 const appBarHide = (doHide) => {
@@ -190,22 +191,7 @@ const appBarHide = (doHide) => {
 	mainWindow.setSkipTaskbar(doHide);
 };
 
-<<<<<<< HEAD
-const moveToTray = () => {
-=======
-ipcMain.on('theme-change', (_, data) => {
-	switch (data) {
-		case 'jellyfin':
-			db.write({ serverType: 'jellyfin' });
-			break;
-		case 'emby':
-			db.write({ serverType: 'emby' });
-			break;
-	}
-});
-
 const moveToTray = (silent) => {
->>>>>>> 87633bf44cf484fdc9671dda57f558054ba5c8ed
 	tray = new Tray(path.join(__dirname, 'icons', 'tray.png'));
 
 	const contextMenu = Menu.buildFromTemplate([
@@ -299,16 +285,6 @@ const moveToTray = (silent) => {
 
 	tray.setToolTip(name);
 	tray.setContextMenu(contextMenu);
-<<<<<<< HEAD
-
-	// ignore the promise
-	// we dont care if the user interacts, we just want the app to start
-	dialog.showMessageBox({
-		type: 'info',
-		title: name,
-		message: `${name} has been minimized to the tray`
-	});
-=======
 	
 	if(silent) {
 		// ignore the promise
@@ -319,7 +295,6 @@ const moveToTray = (silent) => {
 			message: `${name} has been minimized to the tray`
 		});
 	}
->>>>>>> 87633bf44cf484fdc9671dda57f558054ba5c8ed
 
 	appBarHide(true);
 };
@@ -606,6 +581,17 @@ const connectRPC = () => {
 		});
 	});
 };
+
+ipcMain.on('theme-change', (_, data) => {
+	switch (data) {
+		case 'jellyfin':
+			db.write({ serverType: 'jellyfin' });
+			break;
+		case 'emby':
+			db.write({ serverType: 'emby' });
+			break;
+	}
+});
 
 ipcMain.on('theme-change', (_, data) => {
 	switch (data) {
