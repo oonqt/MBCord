@@ -508,19 +508,32 @@ const setPresence = async () => {
 					});
 					break;
 				case 'MusicVideo':
-					const artists = NPItem.Artists.splice(0, 2);
+					// kill yourself i needed to redeclare it
+					var artists = NPItem.Artists.splice(0, 2); // we only want 2 artists
+
 					rpc.setActivity({
 						details: `Watching ${NPItem.Name}`,
 						state: `By ${
-							artists.length ? `${artists.join(', ')}` : 'Unknown Artist'
+							artists.length ? artists.join(', ') : 'Unknown Artist'
 						}`,
 						...defaultProperties
 					});
 					break;
 				case 'Audio':
+					var artists = NPItem.Artists.splice(0, 2);
+					var albumArtists = NPItem.AlbumArtists.map(
+						(ArtistInfo) => ArtistInfo.Name
+					).splice(0, 2);
+
 					rpc.setActivity({
 						details: `Listening to ${NPItem.Name}`,
-						state: `By ${NPItem.AlbumArtist}`,
+						state: `By ${
+							artists.length
+								? artists.join(', ')
+								: albumArtists.length
+								? albumArtists.join(', ')
+								: 'Unknown Artist'
+						}`,
 						...defaultProperties
 					});
 					break;
