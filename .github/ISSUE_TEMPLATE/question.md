@@ -6,5 +6,8 @@ labels: question
 assignees: ''
 
 ---
+** Replace [] with [x] to signify you've completed the following
 
-## Please read over the [commonly asked questions](https://github.com/oonqt/MBCord/wiki/Commonly-Asked-Questions)
+** [] I have read over the setup guide (https://github.com/oonqt/MBCord/wiki/Initial-Setup)
+
+** [] I have read over the commonly asked questions (https://github.com/oonqt/MBCord/wiki/Commonly-Asked-Issues-Questions)

@@ -133,21 +133,11 @@ const toggleDisplay = () => {
 	}
 };
 
-setInterval(() => {
-	console.log('fuck off piece of fucking shit');
-}, 2500)
-
 const checkForUpdates = (calledFromTray) => {
 	checker.checkForUpdate((err, data) => {
 		if (err) {
-			console.log('fuck')
 			if (calledFromTray) {
-				dialog.showMessageBoxSync({
-					title: name,
-					type: 'error',
-					message: 'Failed to check for updates',
-					detail: 'Please try again later',
-				});
+				dialog.showErrorBox(name, 'Failed to check for updates');
 			}
 			logger.error(err);
 			return;
@@ -285,8 +275,8 @@ const moveToTray = (silent) => {
 
 	tray.setToolTip(name);
 	tray.setContextMenu(contextMenu);
-	
-	if(silent) {
+
+	if (silent) {
 		// ignore the promise
 		// we dont care if the user interacts, we just want the app to start
 		dialog.showMessageBox({
@@ -429,14 +419,14 @@ const startPresenceUpdater = async () => {
 		scrubObject(data, 'username', 'password', 'serverAddress', 'port')
 	);
 
+	await connectRPC();
+
 	try {
 		await mbc.login();
 	} catch (err) {
 		logger.error('Failed to authenticate');
 		logger.error(err);
 	}
-
-	await connectRPC();
 
 	setPresence();
 	presenceUpdate = setInterval(setPresence, 15000);

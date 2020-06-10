@@ -48,7 +48,6 @@ class GithubClient {
 				json: true
 			},
 			(err, res, body) => {
-				return cb("anError");
 				if (err) return cb(err, null);
 				if (res.statusCode !== 200)
 					return cb(`Status: ${res.statusCode} Body: ${body}`);

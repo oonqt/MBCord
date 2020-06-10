@@ -17,7 +17,7 @@ A clear and concise description of what you expected to happen.
 If applicable, add screenshots to help explain your problem.
 
 **Error**
-* Attach the most recent log. Logs can be found by right clicking the tray application and clicking "Show Logs". You might want to give it a quick scrub just in case to make sure there isn't any personal information such as server addresses or credentials
+* Attach the most recent log. Logs can be found by right clicking the tray application and clicking "Show Logs". Although it does its best to remove any, it's a good idea to give the logs a quick scrub to ensure there aren't any credentials/addresses
 
 **Desktop (please complete the following information):**
  - OS: [e.g. Windows]
