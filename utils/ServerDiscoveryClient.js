@@ -1,9 +1,10 @@
 const dgram = require('dgram');
+const crypto = require('crypto');
 
 /**
  * @returns {Object<any>} the servers found
  */
-exports.find = (timeoutMs) =>
+exports.find = (timeoutMs, serverType) =>
 	new Promise((resolve) => {
 		const servers = [];
 		const client = dgram.createSocket({ type: 'udp4', reuseAddr: true });
@@ -11,7 +12,7 @@ exports.find = (timeoutMs) =>
 		client.bind(); // not to be confused with function.bind(this, etcetcsfuck)
 
 		client.on('listening', () => {
-			const message = Buffer.from('who is EmbyServer?');
+			const message = Buffer.from(`who is ${serverType}Server?`);
 
 			client.setBroadcast(true);
 			client.send(
@@ -37,7 +38,8 @@ exports.find = (timeoutMs) =>
 					address: addressData[1].slice(2, addressData[1].length),
 					port: addressData[2],
 					protocol: addressData[0],
-					name: response.Name
+					name: response.Name,
+					id: crypto.randomBytes(15).toString("hex")
 				}
 
 				servers.push(server);

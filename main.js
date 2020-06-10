@@ -622,7 +622,15 @@ ipcMain.on('receive-data', (event) => {
 });
 
 ipcMain.on('receive-servers', async (event) => {
-	const servers = await serverDiscoveryClient.find(2500);
+	const jellyfinServers = await serverDiscoveryClient.find(1750, 'jellyfin');
+	const embyServers = await serverDiscoveryClient.find(1750, 'emby');
+
+	const servers = [
+		// prettier-ignore
+		...jellyfinServers.map((server) => Object.assign(server, { type: 'jellyfin' })),
+		...embyServers.map((server) => Object.assign(server, { type: 'emby' }))
+	];
+
 	logger.debug(`Server discovery result: ${JSON.stringify(servers)}`);
 	event.reply('receive-servers', servers);
 });
