@@ -8,6 +8,8 @@
 
 ### First time or looking for some answers? Check out the [Wiki](https://github.com/oonqt/MBCord/wiki)
 
+### Looking for downloads? Check out the [releases page](https://github.com/oonqt/mbcord/releases)
+
 ### A star ✨ on the repository is always appreciated!
 
 ![Jellyfin](https://i.memester.xyz/u/l1d.png)
