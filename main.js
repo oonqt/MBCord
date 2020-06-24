@@ -83,13 +83,13 @@ const startApp = () => {
 	if (!isLocked) return app.quit();
 
 	// is production?
-	if (process.defaultApp) {
-		mainWindow.resizable = true;
-		mainWindow.maximizable = true;
-		mainWindow.minimizable = true;
-	} else {
+	// if (process.defaultApp) {
+	// 	mainWindow.resizable = true;
+	// 	mainWindow.maximizable = true;
+	// 	mainWindow.minimizable = true;
+	// } else {
 		mainWindow.setMenu(null);
-	}
+	// }
 
 	if (db.data().isConfigured) {
 		startPresenceUpdater();
@@ -103,13 +103,19 @@ const startApp = () => {
 };
 
 const loadConfigurationPage = () => {
-	mainWindow.loadFile(path.join(__dirname, 'static', 'configure.html'));
+	// if we dont set to resizable and we load lib configuration and then this window, it stays the same size as the lib configuration window
+	
+	mainWindow.resizable = true;
+
 	mainWindow.setSize(480, 310);
+	mainWindow.loadFile(path.join(__dirname, 'static', 'configure.html'));
+
+	mainWindow.resizable = false;
 
 	appBarHide(false);
 };
 
-const resetApp = async () => {
+const resetApp = () => {
 	const blankSettings = SettingsModel();
 
 	db.write(blankSettings);
@@ -117,7 +123,7 @@ const resetApp = async () => {
 	stopPresenceUpdater();
 
 	tray.destroy();
-
+	
 	loadConfigurationPage();
 };
 
@@ -212,28 +218,24 @@ const moveToTray = (silent) => {
 			label: 'Log Level',
 			submenu: [
 				{
-					id: 'log-debug',
 					type: 'checkbox',
 					label: 'debug',
 					click: () => setLogLevel('debug'),
 					checked: logger.level === 'debug'
 				},
 				{
-					id: 'log-info',
 					type: 'checkbox',
 					label: 'info',
 					click: () => setLogLevel('info'),
 					checked: logger.level === 'info'
 				},
 				{
-					id: 'log-warn',
 					type: 'checkbox',
 					label: 'warn',
 					click: () => setLogLevel('warn'),
 					checked: logger.level === 'warn'
 				},
 				{
-					id: 'log-error',
 					type: 'checkbox',
 					label: 'error',
 					click: () => setLogLevel('error'),
@@ -635,8 +637,24 @@ ipcMain.on('receive-data', (event) => {
 });
 
 ipcMain.on('receive-servers', async (event) => {
-	const jellyfinServers = await serverDiscoveryClient.find(1750, 'jellyfin');
-	const embyServers = await serverDiscoveryClient.find(1750, 'emby');
+	let jellyfinServers = [];
+	let embyServers = [];
+
+	try {
+		jellyfinServers = await serverDiscoveryClient.find(1750, 'jellyfin');
+	} catch (err) {
+		jellyfinServers = [];
+		logger.error('Failed to get Jellyfin servers');
+		logger.error(err);
+	}
+
+	try {
+		embyServers = await serverDiscoveryClient.find(1750, 'emby');
+	} catch (err) {
+		embyServers = [];
+		logger.error('Failed to get Emby servers');
+		logger.error(err);
+	}
 
 	const servers = [
 		// prettier-ignore

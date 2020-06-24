@@ -30,14 +30,15 @@ class MBClient {
 	}
 
 	get headers() {
-		return {
-			'X-Emby-Token': this.accessToken,
-			'User-Agent': `${this.deviceName}/${this.deviceVersion}`
-		};
+		const headers = {};
+		
+		headers['User-Agent'] = `${this.deviceName}/${this.deviceVersion}`;
+		if(this.accessToken) headers['X-Emby-Token'] = this.accessToken;
+		
+		return headers;
 	}
-
 	/**
-	 * @returns {Promise<void>} the sessions
+	 * @returns {Promise<Array<Object>>} the sessions
 	 */
 	getSessions() {
 		return new Promise((resolve, reject) => {
@@ -55,6 +56,24 @@ class MBClient {
 					resolve(body);
 				}
 			);
+		});
+	}
+
+	/**
+	 * @returns {Promise<Array<Object>>} The users that are publically available
+	 */
+	getPublicUsers() {
+		return new Promise((resolve, reject) => {
+			request(`${this.serverAddress}/Users/Public`, {
+				headers: this.headers,
+				json: true
+			}, (err, res, body) => {
+				reject(err);
+				if (res.statusCode !== 200)
+					return reject(`Status: ${res.statusCode} Response: ${res.body}`);
+
+				resolve(body);
+			});
 		});
 	}
 

@@ -1,11 +1,12 @@
 const dgram = require('dgram');
 const crypto = require('crypto');
+const { rejects } = require('assert');
 
 /**
  * @returns {Object<any>} the servers found
  */
 exports.find = (timeoutMs, serverType) =>
-	new Promise((resolve) => {
+	new Promise((resolve, reject) => {
 		const servers = [];
 		const client = dgram.createSocket({ type: 'udp4', reuseAddr: true });
 
@@ -22,7 +23,7 @@ exports.find = (timeoutMs, serverType) =>
 				7359,
 				'255.255.255.255',
 				(err) => {
-					if (err) throw err;
+					if (err) rejects(err);
 				}
 			);
 		});
