@@ -1,4 +1,12 @@
 const { ipcRenderer } = require('electron');
+const path = require('path');
+const {
+	CONFIG_SAVE,
+	VALIDATION_ERROR,
+	RECEIVE_SERVERS,
+	RECEIVE_TYPE,
+	THEME_CHANGE
+} = require(path.resolve('constants.js'));
 
 document.getElementById('configuration').addEventListener('submit', (e) => {
 	e.preventDefault();
@@ -12,7 +20,7 @@ document.getElementById('configuration').addEventListener('submit', (e) => {
 	let protocol = document.getElementById('protocol').value;
 	let port = document.getElementById('port').value;
 
-	ipcRenderer.send('config-save', {
+	ipcRenderer.send(CONFIG_SAVE, {
 		serverAddress,
 		username,
 		password,
@@ -28,7 +36,7 @@ document.getElementById('serverType').addEventListener('click', function () {
 	setTheme(current === colors.embyTheme.solid ? 'jellyfin' : 'emby');
 });
 
-ipcRenderer.on('validation-error', (_, data) => {
+ipcRenderer.on(VALIDATION_ERROR, (_, data) => {
 	data.forEach((fieldName) => {
 		const field = document.getElementById(fieldName);
 
@@ -36,7 +44,7 @@ ipcRenderer.on('validation-error', (_, data) => {
 	});
 });
 
-ipcRenderer.on('receive-servers', (_, data) => {
+ipcRenderer.on(RECEIVE_SERVERS, (_, data) => {
 	document.querySelector('.splashScreen').style.display = 'none';
 	document.querySelector('.content').style.display = 'block';
 
@@ -54,19 +62,17 @@ ipcRenderer.on('receive-servers', (_, data) => {
 		serverList.innerHTML = data
 			.map(
 				(server) =>
-					`<option value="${server.id}:${
-						server.type
-					}">${server.name.trim()} - ${server.fullAddress} (${
-						server.type
-					})</option>`
+					`<option value="${server.id}">${server.name.trim()} - ${
+						server.fullAddress
+					} (${server.type})</option>`
 			)
 			.join('');
 		M.FormSelect.init(serverList);
 
 		serverList.addEventListener('change', function () {
-			const serverType = this.value.split(':')[1];
+			const server = data.find((server) => server.id === this.value);
 
-			setTheme(serverType);
+			setTheme(server.type);
 		});
 
 		serverDiscoveryModal
@@ -93,7 +99,7 @@ ipcRenderer.on('receive-servers', (_, data) => {
 	}
 });
 
-ipcRenderer.on('config-type', (_, data) => {
+ipcRenderer.on(RECEIVE_TYPE, (_, data) => {
 	setTheme(data);
 });
 
@@ -107,7 +113,7 @@ function setTheme(themeName) {
 				colors.embyTheme.solid
 			);
 			serverType.textContent = 'Switch to Jellyfin?';
-			ipcRenderer.send('theme-change', 'emby');
+			ipcRenderer.send(THEME_CHANGE, 'emby');
 			break;
 		case 'jellyfin':
 			document.documentElement.style.setProperty(
@@ -115,10 +121,10 @@ function setTheme(themeName) {
 				colors.jellyfinTheme.solid
 			);
 			serverType.textContent = 'Switch to Emby?';
-			ipcRenderer.send('theme-change', 'jellyfin');
+			ipcRenderer.send(THEME_CHANGE, 'jellyfin');
 			break;
 	}
 }
 
-ipcRenderer.send('receive-data');
-ipcRenderer.send('receive-servers');
+ipcRenderer.send(RECEIVE_TYPE);
+ipcRenderer.send(RECEIVE_SERVERS);

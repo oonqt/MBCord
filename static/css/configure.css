@@ -1,88 +1,88 @@
 * {
-  user-select: none;
+	user-select: none;
 }
 
 .container {
-  text-align: center;
+	text-align: center;
 }
 
 .content {
-  display: none;
+	display: none;
 }
 
 .splashScreen {
-  margin-top: 25px;
+	margin-top: 25px;
 }
 
 .row {
-  margin: 0;
+	margin: 0;
 }
 
 .btn {
-  width: 100%;
+	width: 100%;
 }
 
 .modal-title {
-  margin-top: 0 !important;
-  font-weight: 500;
+	margin-top: 0 !important;
+	font-weight: 500;
 }
 
 .modal {
-  height: 100%;
-  width: 90%;
+	height: 100%;
+	width: 90%;
 }
 
 .button-row {
-  margin-top: 14px
+	margin-top: 14px;
 }
 
 .left-button {
-  padding-left: 0 !important;
+	padding-left: 0 !important;
 }
 
 .right-button {
-  padding-right: 0 !important;
+	padding-right: 0 !important;
 }
 
 #serverType {
-  position: absolute;
-  display: block;
-  margin-top: 5px;
-  padding-left: 10px;
-  cursor: pointer;
-  font-weight: 450;
-  color: var(--color);
+	position: absolute;
+	display: block;
+	margin-top: 5px;
+	padding-left: 10px;
+	cursor: pointer;
+	font-weight: 450;
+	color: var(--color);
 }
 
 .modal-content {
-  text-align: center;
+	text-align: center;
 }
 
 #closeModal:hover {
-    text-decoration: underline;
+	text-decoration: underline;
 }
 
 #msg {
-  color: red; 
-  display: block; 
-  margin-top: 5px;
+	color: red;
+	display: block;
+	margin-top: 5px;
 }
 
 .btn,
 .btn:hover,
 .btn:focus {
-  background-color: var(--color);
+	background-color: var(--color);
 }
 
 .input-field input:focus + label {
-  color: var(--color) !important;
+	color: var(--color) !important;
 }
 
 input:focus {
-  border-bottom: 1px solid var(--color) !important;
-  box-shadow: 0 1px 0 0 var(--color) !important;
+	border-bottom: 1px solid var(--color) !important;
+	box-shadow: 0 1px 0 0 var(--color) !important;
 }
 
 li > span {
-  color: var(--color) !important;
+	color: var(--color) !important;
 }

@@ -60,24 +60,6 @@ class MBClient {
 	}
 
 	/**
-	 * @returns {Promise<Array<Object>>} The users that are publically available
-	 */
-	getPublicUsers() {
-		return new Promise((resolve, reject) => {
-			request(`${this.serverAddress}/Users/Public`, {
-				headers: this.headers,
-				json: true
-			}, (err, res, body) => {
-				reject(err);
-				if (res.statusCode !== 200)
-					return reject(`Status: ${res.statusCode} Response: ${res.body}`);
-
-				resolve(body);
-			});
-		});
-	}
-
-	/**
 	 * @returns {Promise<void>}
 	 */
 	assignDeviceCapabilities() {

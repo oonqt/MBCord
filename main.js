@@ -6,7 +6,8 @@ const {
 	Tray,
 	Menu,
 	shell,
-	dialog
+	dialog,
+	Notification
 } = require('electron');
 const Startup = require('./utils/startupHandler');
 const JsonDB = require('./utils/JsonDB');
@@ -25,6 +26,16 @@ const {
 	updateCheckInterval,
 	logRetentionCount
 } = require('./config/default.json');
+const {
+	VIEW_SAVE,
+	CONFIG_SAVE,
+	THEME_CHANGE,
+	RECEIVE_VIEWS,
+	RECEIVE_TYPE,
+	RECEIVE_SERVERS,
+	VALIDATION_ERROR,
+	FETCH_FAILED
+} = require('./constants');
 
 const db = new JsonDB(
 	path.join(app.getPath('userData'), 'config.json'),
@@ -83,17 +94,17 @@ const startApp = () => {
 	if (!isLocked) return app.quit();
 
 	// is production?
-	// if (process.defaultApp) {
-	// 	mainWindow.resizable = true;
-	// 	mainWindow.maximizable = true;
-	// 	mainWindow.minimizable = true;
-	// } else {
+	if (process.defaultApp) {
+		mainWindow.resizable = true;
+		mainWindow.maximizable = true;
+		mainWindow.minimizable = true;
+	} else {
 		mainWindow.setMenu(null);
-	// }
+	}
 
 	if (db.data().isConfigured) {
 		startPresenceUpdater();
-		moveToTray(true);
+		moveToTray();
 	} else {
 		loadConfigurationPage();
 	}
@@ -103,27 +114,24 @@ const startApp = () => {
 };
 
 const loadConfigurationPage = () => {
-	// if we dont set to resizable and we load lib configuration and then this window, it stays the same size as the lib configuration window
-	
+	// if we dont set to resizable and we load lib configuration and then this window, it stays the same size as the lib configuration window (it doesnt do this for any other windows goddammit!)
 	mainWindow.resizable = true;
 
 	mainWindow.setSize(480, 310);
 	mainWindow.loadFile(path.join(__dirname, 'static', 'configure.html'));
 
-	mainWindow.resizable = false;
+	if (!process.defaultApp) mainWindow.resizable = false;
 
 	appBarHide(false);
 };
 
 const resetApp = () => {
-	const blankSettings = SettingsModel();
-
-	db.write(blankSettings);
+	db.reset();
 
 	stopPresenceUpdater();
 
 	tray.destroy();
-	
+
 	loadConfigurationPage();
 };
 
@@ -187,7 +195,7 @@ const appBarHide = (doHide) => {
 	mainWindow.setSkipTaskbar(doHide);
 };
 
-const moveToTray = (silent) => {
+const moveToTray = () => {
 	tray = new Tray(path.join(__dirname, 'icons', 'tray.png'));
 
 	const contextMenu = Menu.buildFromTemplate([
@@ -278,22 +286,16 @@ const moveToTray = (silent) => {
 	tray.setToolTip(name);
 	tray.setContextMenu(contextMenu);
 
-	if (silent) {
-		// ignore the promise
-		// we dont care if the user interacts, we just want the app to start
-		dialog.showMessageBox({
-			type: 'info',
-			title: name,
-			message: `${name} has been minimized to the tray`
-		});
-	}
+	new Notification({
+		title: `${name} ${version}`,
+		body: `${name} has been minimized to the tray`,
+	}).show();
 
 	appBarHide(true);
 };
 
 const setLogLevel = (level) => {
 	db.write({ logLevel: level });
-	tray;
 	logger.level = level;
 };
 
@@ -317,74 +319,6 @@ const loadIgnoredLibrariesPage = () => {
 
 	appBarHide(false);
 };
-
-ipcMain.on('view-save', (_, data) => {
-	const ignoredViews = db.data().ignoredViews;
-
-	if (ignoredViews.includes(data)) {
-		ignoredViews.splice(ignoredViews.indexOf(data), 1);
-	} else {
-		ignoredViews.push(data);
-	}
-
-	db.write({
-		ignoredViews
-	});
-});
-
-ipcMain.on('config-save', async (_, data) => {
-	const emptyFields = Object.entries(data)
-		.filter((entry) => !entry[1] && entry[0] !== 'password') // where entry[1] is the value, and if the field password is ignore it (emby and jelly dont require pws)
-		.map((field) => field[0]); // we map empty fields by their names
-
-	if (emptyFields.length) {
-		mainWindow.webContents.send('validation-error', emptyFields);
-		dialog.showMessageBox(mainWindow, {
-			title: name,
-			type: 'error',
-			detail: 'Please make sure that all the fields are filled in!'
-		});
-		return;
-	}
-
-	mbc = new MBClient(
-		{
-			address: data.serverAddress,
-			username: data.username,
-			password: data.password,
-			protocol: data.protocol,
-			port: data.port
-		},
-		{
-			deviceName: name,
-			deviceId: UUID,
-			deviceVersion: version,
-			iconUrl: iconUrl
-		}
-	);
-
-	logger.debug('Attempting to log into server');
-	logger.debug(
-		scrubObject(data, 'username', 'password', 'serverAddress', 'port')
-	);
-
-	try {
-		await mbc.login();
-	} catch (error) {
-		logger.error(error);
-		dialog.showMessageBox(mainWindow, {
-			type: 'error',
-			title: name,
-			detail: 'Invalid server address or login credentials'
-		});
-		return;
-	}
-
-	db.write({ ...data, isConfigured: true, doDisplayStatus: true });
-
-	moveToTray();
-	startPresenceUpdater();
-});
 
 const stopPresenceUpdater = async () => {
 	if (mbc) {
@@ -418,7 +352,7 @@ const startPresenceUpdater = async () => {
 
 	logger.debug('Attempting to log into server');
 	logger.debug(
-		scrubObject(data, 'username', 'password', 'serverAddress', 'port')
+		scrubObject(data, 'username', 'password')
 	);
 
 	await connectRPC();
@@ -426,8 +360,10 @@ const startPresenceUpdater = async () => {
 	try {
 		await mbc.login();
 	} catch (err) {
-		logger.error('Failed to authenticate');
+		logger.error('Failed to authenticate. Retrying in 30 seconds.');
 		logger.error(err);
+		setTimeout(startPresenceUpdater, 30000);
+		return; // yeah no sorry buddy we don't want to continue if we didn't authenticate
 	}
 
 	setPresence();
@@ -587,7 +523,73 @@ const connectRPC = () => {
 	});
 };
 
-ipcMain.on('theme-change', (_, data) => {
+ipcMain.on(VIEW_SAVE, (_, data) => {
+	const ignoredViews = db.data().ignoredViews;
+
+	if (ignoredViews.includes(data)) {
+		ignoredViews.splice(ignoredViews.indexOf(data), 1);
+	} else {
+		ignoredViews.push(data);
+	}
+
+	db.write({
+		ignoredViews
+	});
+});
+
+ipcMain.on(CONFIG_SAVE, async (_, data) => {
+	const emptyFields = Object.entries(data)
+		.filter((entry) => !entry[1] && entry[0] !== 'password') // where entry[1] is the value, and if the field password is ignore it (emby and jelly dont require pws)
+		.map((field) => field[0]); // we map empty fields by their names
+
+	if (emptyFields.length) {
+		mainWindow.webContents.send(VALIDATION_ERROR, emptyFields);
+		dialog.showMessageBox(mainWindow, {
+			title: name,
+			type: 'error',
+			detail: 'Please make sure that all the fields are filled in!'
+		});
+		return;
+	}
+
+	mbc = new MBClient(
+		{
+			address: data.serverAddress,
+			username: data.username,
+			password: data.password,
+			protocol: data.protocol,
+			port: data.port
+		},
+		{
+			deviceName: name,
+			deviceId: UUID,
+			deviceVersion: version,
+			iconUrl: iconUrl
+		}
+	);
+
+	logger.debug('Attempting to log into server');
+	logger.debug(scrubObject(data, 'username', 'password'));
+
+	try {
+		await mbc.login();
+	} catch (error) {
+		logger.error(error);
+		dialog.showMessageBox(mainWindow, {
+			type: 'error',
+			title: name,
+			detail: 'Invalid server address or login credentials'
+		});
+		return;
+	}
+
+	db.write({ ...data, isConfigured: true, doDisplayStatus: true });
+
+	moveToTray();
+	startPresenceUpdater();
+});
+
+ipcMain.on(THEME_CHANGE, (_, data) => {
 	switch (data) {
 		case 'jellyfin':
 			db.write({ serverType: 'jellyfin' });
@@ -598,24 +600,13 @@ ipcMain.on('theme-change', (_, data) => {
 	}
 });
 
-ipcMain.on('theme-change', (_, data) => {
-	switch (data) {
-		case 'jellyfin':
-			db.write({ serverType: 'jellyfin' });
-			break;
-		case 'emby':
-			db.write({ serverType: 'emby' });
-			break;
-	}
-});
-
-ipcMain.on('receive-views', async (event) => {
+ipcMain.on(RECEIVE_VIEWS, async (event) => {
 	let userViews;
 
 	try {
 		userViews = await mbc.getUserViews();
 	} catch (err) {
-		event.reply('fetch-failed');
+		event.reply(FETCH_FAILED);
 		dialog.showErrorBox(name, 'Failed to fetch libraries for your user');
 		logger.error(err);
 		return;
@@ -629,14 +620,14 @@ ipcMain.on('receive-views', async (event) => {
 	logger.debug('Sending view data to renderer');
 	logger.debug(viewData);
 
-	event.reply('receive-views', viewData);
+	event.reply(RECEIVE_VIEWS, viewData);
 });
 
-ipcMain.on('receive-data', (event) => {
-	event.reply('config-type', db.data().serverType);
+ipcMain.on(RECEIVE_TYPE, (event) => {
+	event.reply(RECEIVE_TYPE, db.data().serverType);
 });
 
-ipcMain.on('receive-servers', async (event) => {
+ipcMain.on(RECEIVE_SERVERS, async (event) => {
 	let jellyfinServers = [];
 	let embyServers = [];
 
@@ -658,12 +649,15 @@ ipcMain.on('receive-servers', async (event) => {
 
 	const servers = [
 		// prettier-ignore
-		...jellyfinServers.map((server) => Object.assign(server, { type: 'jellyfin' })),
-		...embyServers.map((server) => Object.assign(server, { type: 'emby' }))
+		...embyServers.map((server) => Object.assign(server, { type: 'emby' })),
+		...jellyfinServers.map((server) =>
+			Object.assign(server, { type: 'jellyfin' })
+		)
 	];
 
 	logger.debug(`Server discovery result: ${JSON.stringify(servers)}`);
-	event.reply('receive-servers', servers);
+
+	event.reply(RECEIVE_SERVERS, servers);
 });
 
 app.on('ready', () => startApp());

@@ -1,6 +1,13 @@
 const { ipcRenderer } = require('electron');
+const path = require('path');
+const {
+	RECEIVE_VIEWS,
+	RECEIVE_TYPE,
+	FETCH_FAILED,
+	VIEW_SAVE
+} = require(path.resolve('constants.js'));
 
-ipcRenderer.on('fetch-failed', () => {
+ipcRenderer.on(FETCH_FAILED, () => {
 	document.querySelector('.progress').style.display = 'none';
 
 	const retry = document.getElementById('retry');
@@ -9,7 +16,7 @@ ipcRenderer.on('fetch-failed', () => {
 	retry.addEventListener('click', () => {
 		document.querySelector('.progress').style.display = 'block';
 		retry.style.display = 'none';
-		ipcRenderer.send('receive-views');
+		ipcRenderer.send(RECEIVE_VIEWS);
 	});
 });
 
@@ -18,10 +25,10 @@ const reload = document.getElementById('reload');
 reload.addEventListener('click', () => {
 	document.querySelector('.progress').style.display = 'block';
 	document.querySelector('.viewsContainer').style.display = 'none';
-	ipcRenderer.send('receive-views');
+	ipcRenderer.send(RECEIVE_VIEWS);
 });
 
-ipcRenderer.on('receive-views', (_, views) => {
+ipcRenderer.on(RECEIVE_VIEWS, (_, views) => {
 	document.querySelector('.progress').style.display = 'none';
 	document.querySelector('.viewsContainer').style.display = 'block';
 
@@ -59,12 +66,13 @@ ipcRenderer.on('receive-views', (_, views) => {
 			} else {
 				view.parentElement.querySelector('span').textContent = 'Watching';
 			}
-			ipcRenderer.send('view-save', this.id);
+
+			ipcRenderer.send(VIEW_SAVE, this.id);
 		});
 	});
 });
 
-ipcRenderer.on('config-type', (_, data) => {
+ipcRenderer.on(RECEIVE_TYPE, (_, data) => {
 	switch (data) {
 		case 'emby':
 			document.documentElement.style.setProperty(
@@ -89,5 +97,5 @@ ipcRenderer.on('config-type', (_, data) => {
 	}
 });
 
-ipcRenderer.send('receive-data');
-ipcRenderer.send('receive-views');
+ipcRenderer.send(RECEIVE_TYPE);
+ipcRenderer.send(RECEIVE_VIEWS);

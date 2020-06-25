@@ -26,6 +26,10 @@ class JsonDB {
 		}
 	}
 
+	reset() {
+		this.write(this.model());
+	}
+
 	/**
 	 *
 	 * @param {object} data Data to write to DB
