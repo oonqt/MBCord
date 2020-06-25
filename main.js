@@ -285,19 +285,33 @@ const moveToTray = () => {
 
 	tray.setToolTip(name);
 	tray.setContextMenu(contextMenu);
-
+	
 	new Notification({
 		title: `${name} ${version}`,
 		body: `${name} has been minimized to the tray`
 	}).show();
+	
+	const setLogLevel = (level) => {
+		db.write({ logLevel: level });
+		logger.level = level;
+
+		// we do this to prevent multiple items from being checked at once
+		const menuItems = contextMenu.items[5].submenu.items;
+
+		menuItems.forEach((item, index) => {
+			if(item.label === level) {
+				menuItems[index].checked = true;
+			} else {
+				menuItems[index].checked = false;
+			}
+		});
+
+		tray.setContextMenu(contextMenu);
+	};
 
 	appBarHide(true);
 };
 
-const setLogLevel = (level) => {
-	db.write({ logLevel: level });
-	logger.level = level;
-};
 
 const loadIgnoredLibrariesPage = () => {
 	mainWindow.loadFile(
