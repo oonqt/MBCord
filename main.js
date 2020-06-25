@@ -9,7 +9,7 @@ const {
 	dialog,
 	Notification
 } = require('electron');
-const StartupHandler = require('./utils/StartupHandler');
+const StartupHandler = require('./utils/startupHandler');
 const JsonDB = require('./utils/JsonDB');
 const MBClient = require('./utils/MBClient');
 const DiscordRPC = require('discord-rpc');
