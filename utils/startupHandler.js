@@ -1,5 +1,6 @@
 const mkdirp = require('mkdirp');
 const fs = require('fs');
+const path = require('path');
 const untildify = require('untildify');
 
 // Electron provides a wonderful startup API for windows and mac. Linux? Not so much.
@@ -25,7 +26,7 @@ class startupHandler {
      * @private
      */
     get filePath() {
-        return `#${this.directory}#${this.name}.desktop`
+        return path.join(this.directory, `${this.name}.desktop`);
     }
 
     /**
