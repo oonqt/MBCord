@@ -30,12 +30,15 @@
     "rimraf": "^3.0.2"
   },
   "dependencies": {
+    "auto-launch": "^5.0.5",
     "colors": "^1.4.0",
     "discord-rpc": "^3.0.2",
     "json-stringify-safe": "^5.0.1",
     "material-icons": "^0.3.1",
     "materialize-css": "^1.0.0",
-    "request": "^2.88.0"
+    "mkdirp": "^1.0.4",
+    "request": "^2.88.0",
+    "untildify": "^4.0.0"
   },
   "homepage": "https://github.com/oonqt/MBCord"
 }

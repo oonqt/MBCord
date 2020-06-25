@@ -9,7 +9,7 @@ const {
 	dialog,
 	Notification
 } = require('electron');
-const Startup = require('./utils/startupHandler');
+const StartupHandler = require('./utils/StartupHandler');
 const JsonDB = require('./utils/JsonDB');
 const MBClient = require('./utils/MBClient');
 const DiscordRPC = require('discord-rpc');
@@ -41,7 +41,7 @@ const db = new JsonDB(
 	path.join(app.getPath('userData'), 'config.json'),
 	SettingsModel
 );
-const startupHandler = new Startup(app);
+const startupHandler = new StartupHandler(app, name);
 const checker = new UpdateChecker(author, name, version);
 const logger = new Logger(
 	process.defaultApp ? 'console' : 'file',
@@ -288,7 +288,7 @@ const moveToTray = () => {
 
 	new Notification({
 		title: `${name} ${version}`,
-		body: `${name} has been minimized to the tray`,
+		body: `${name} has been minimized to the tray`
 	}).show();
 
 	appBarHide(true);
@@ -351,9 +351,7 @@ const startPresenceUpdater = async () => {
 	}
 
 	logger.debug('Attempting to log into server');
-	logger.debug(
-		scrubObject(data, 'username', 'password')
-	);
+	logger.debug(scrubObject(data, 'username', 'password'));
 
 	await connectRPC();
 
