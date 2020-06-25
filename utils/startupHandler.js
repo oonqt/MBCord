@@ -34,7 +34,7 @@ class startupHandler {
      */
     get isEnabled() {
         if (process.platform === 'linux') {
-            return fs.existsSync(this.file);
+            return fs.existsSync(this.filePath);
         } else {
             return this.app.getLoginItemSettings().openAtLogin;
         }
