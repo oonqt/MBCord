@@ -99,7 +99,7 @@ const startApp = () => {
 		mainWindow.maximizable = true;
 		mainWindow.minimizable = true;
 	} else {
-		mainWindow.setMenu(null);
+		// mainWindow.setMenu(null);
 	}
 
 	if (db.data().isConfigured) {

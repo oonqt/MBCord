@@ -6,7 +6,7 @@ const {
 	RECEIVE_SERVERS,
 	RECEIVE_TYPE,
 	THEME_CHANGE
-} = require(path.resolve('constants.js'));
+} = require(path.resolve(__dirname, '..', 'constants.js'));
 
 document.getElementById('configuration').addEventListener('submit', (e) => {
 	e.preventDefault();

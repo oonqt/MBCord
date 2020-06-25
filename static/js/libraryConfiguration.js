@@ -5,7 +5,7 @@ const {
 	RECEIVE_TYPE,
 	FETCH_FAILED,
 	VIEW_SAVE
-} = require(path.resolve('constants.js'));
+} = require(path.resolve(__dirname, '..', 'constants.js'));
 
 ipcRenderer.on(FETCH_FAILED, () => {
 	document.querySelector('.progress').style.display = 'none';
