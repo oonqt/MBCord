@@ -276,7 +276,9 @@ class MBClient {
 	 */
 	logout() {
 		return new Promise((resolve) => {
-			if (this.userId) this.userId = null;
+			this.userId = null;
+			this.itemLibraryIDCache = {};
+			this.libraryIDCache = {};
 
 			if (this.accessToken) {
 				request.post(

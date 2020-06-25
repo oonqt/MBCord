@@ -417,7 +417,7 @@ const setPresence = async () => {
 			const endTimestamp = calcEndTimestamp(session, currentEpochSeconds);
 			// use endTimestamp to calculate an automatic timeout to set the status so there is less of a delay
 
-			logger.debug(`${endTimestamp - currentEpochSeconds}`);
+			logger.debug(`Time until media end: ${endTimestamp - currentEpochSeconds}`);
 
 			setTimeout(
 				setPresence,
@@ -619,8 +619,15 @@ ipcMain.on(RECEIVE_VIEWS, async (event) => {
 		userViews = await mbc.getUserViews();
 	} catch (err) {
 		event.reply(FETCH_FAILED);
-		dialog.showErrorBox(name, 'Failed to fetch libraries for your user');
+		dialog.showErrorBox(name, 'Failed to fetch libraries for your user. Please try the reload button.');
 		logger.error(err);
+
+		if (!mbc.accessToken) {
+			// Not authed yet
+			logger.info("Attempting to authenticate")
+			mbc.login();
+		}
+
 		return;
 	}
 
