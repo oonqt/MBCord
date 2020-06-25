@@ -649,10 +649,8 @@ ipcMain.on(RECEIVE_SERVERS, async (event) => {
 
 	const servers = [
 		// prettier-ignore
-		...embyServers.map((server) => Object.assign(server, { type: 'emby' })),
-		...jellyfinServers.map((server) =>
-			Object.assign(server, { type: 'jellyfin' })
-		)
+		...embyServers,
+		...jellyfinServers
 	];
 
 	logger.debug(`Server discovery result: ${JSON.stringify(servers)}`);

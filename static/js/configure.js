@@ -64,7 +64,7 @@ ipcRenderer.on(RECEIVE_SERVERS, (_, data) => {
 				(server) =>
 					`<option value="${server.id}">${server.name.trim()} - ${
 						server.fullAddress
-					} (${server.type})</option>`
+					} (${server.type.charAt(0).toUpperCase() + server.type.substr(1, server.type.length)})</option>`
 			)
 			.join('');
 		M.FormSelect.init(serverList);

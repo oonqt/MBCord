@@ -40,7 +40,8 @@ exports.find = (timeoutMs, serverType) =>
 					port: addressData[2],
 					protocol: addressData[0],
 					name: response.Name,
-					id: crypto.randomBytes(15).toString("hex")
+					id: crypto.randomBytes(15).toString("hex"),
+					type: serverType
 				}
 
 				servers.push(server);
