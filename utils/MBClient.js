@@ -26,7 +26,9 @@ class MBClient {
 	}
 
 	get serverAddress() {
-		return `${this.protocol}://${this.address}:${this.port}/emby`;
+		const url = new URL(`${this.protocol}://${this.address}`);
+        url.port = this.port;
+        return url.toString();
 	}
 
 	get headers() {
