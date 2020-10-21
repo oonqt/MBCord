@@ -27,7 +27,7 @@ class MBClient {
 
 	get serverAddress() {
 		const url = new URL(`${this.protocol}://${this.address}`);
-        url.port = this.port;
+		url.port = this.port;
         return url.toString();
 	}
 
