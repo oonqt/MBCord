@@ -13,11 +13,12 @@ ipcRenderer.on(FETCH_FAILED, () => {
 	const retry = document.getElementById('retry');
 
 	retry.style.display = 'block';
-	retry.addEventListener('click', () => {
-		document.querySelector('.progress').style.display = 'block';
-		retry.style.display = 'none';
-		ipcRenderer.send(RECEIVE_VIEWS);
-	});
+});
+
+retry.addEventListener('click', () => {
+	document.querySelector('.progress').style.display = 'block';
+	retry.style.display = 'none';
+	ipcRenderer.send(RECEIVE_VIEWS);
 });
 
 const reload = document.getElementById('reload'); 

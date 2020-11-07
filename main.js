@@ -396,7 +396,7 @@ const setPresence = async () => {
 
 		const session = sessions.find(
 			(session) =>
-				session.UserName === data.username &&
+				session.UserName.toLowerCase() === data.username.toLowerCase() &&
 				session.NowPlayingItem !== undefined
 		);
 
@@ -415,7 +415,6 @@ const setPresence = async () => {
 
 			const currentEpochSeconds = new Date().getTime() / 1000;
 			const endTimestamp = calcEndTimestamp(session, currentEpochSeconds);
-			// use endTimestamp to calculate an automatic timeout to set the status so there is less of a delay
 
 			logger.debug(`Time until media end: ${endTimestamp - currentEpochSeconds}`);
 
@@ -438,14 +437,14 @@ const setPresence = async () => {
 			switch (NPItem.Type) {
 				case 'Episode':
 					// prettier-ignore
-					const seasonNum = NPItem.ParentIndexNumber.toString().padStart(2, '0');
+					const seasonNum = NPItem.ParentIndexNumber
 					// prettier-ignore
-					const episodeNum = NPItem.IndexNumber.toString().padStart(2, '0');
+					const episodeNum = NPItem.IndexNumber;
 
 					rpc.setActivity({
 						details: `Watching ${NPItem.SeriesName}`,
-						state: `${NPItem.ParentIndexNumber ? `S${seasonNum}` : ''}${
-							NPItem.IndexNumber ? `E${episodeNum}: ` : ''
+						state: `${seasonNum ? `S${seasonNum.toString().padStart(2, '0')}` : ''}${
+							episodeNum ? `E${episodeNum.toString().padStart(2, '0')}: ` : ''
 						}${NPItem.Name}`,
 						...defaultProperties
 					});
@@ -481,8 +480,8 @@ const setPresence = async () => {
 							artists.length
 								? artists.join(', ')
 								: albumArtists.length
-								? albumArtists.join(', ')
-								: 'Unknown Artist'
+									? albumArtists.join(', ')
+									: 'Unknown Artist'
 						}`,
 						...defaultProperties
 					});
