@@ -53,7 +53,7 @@ class MBClient {
 				(err, res, body) => {
 					if (err) return reject(err);
 					if (res.statusCode !== 200)
-						return reject(`Status: ${res.statusCode} Response: ${res.body}`);
+						return reject(`Status: ${res.statusCode} Response: ${JSON.stringify(body)}`);
 
 					resolve(body);
 				}
@@ -78,7 +78,7 @@ class MBClient {
 				(err, res) => {
 					if (err) return reject(err);
 					if (res.statusCode !== 204)
-						return reject(`Status: ${res.statusCode} Reason: ${res.body}`);
+						return reject(`Status: ${res.statusCode} Reason: ${JSON.stringify(body)}`);
 
 					resolve();
 				}
@@ -107,7 +107,7 @@ class MBClient {
 				async (err, res, body) => {
 					if (err) return reject(err);
 					if (res.statusCode !== 200)
-						return reject(`Status: ${res.statusCode} Response: ${body}`);
+						return reject(`Status: ${res.statusCode} Response: ${JSON.stringify(body)}`);
 
 					// some libraries might have no items
 					if (!body.Items[0]) return resolve(null);
@@ -136,7 +136,7 @@ class MBClient {
 				(err, res, body) => {
 					if (err) return reject(err);
 					if (res.statusCode !== 200)
-						return reject(`Status: ${res.statusCode} Response: ${body}`);
+						return reject(`Status: ${res.statusCode} Response: ${JSON.stringify(body)}`);
 
 					resolve(body);
 				}
@@ -164,7 +164,7 @@ class MBClient {
 				(err, res, body) => {
 					if (err) return reject(err);
 					if (res.statusCode !== 200)
-						return reject(`Status: ${res.statusCode} Response: ${body}`);
+						return reject(`Status: ${res.statusCode} Response: ${JSON.stringify(body)}`);
 
 					// second ancestor is always the library
 					const libraryID = body.splice(body.length - 2, 1)[0].Id;
@@ -189,7 +189,7 @@ class MBClient {
 				async (err, res, body) => {
 					if (err) return reject(err);
 					if (res.statusCode !== 200)
-						return reject(`Status: ${res.statusCode} Response: ${body}`);
+						return reject(`Status: ${res.statusCode} Response: ${JSON.stringify(body)}`);
 
 					// undefined is for mixedcontent libraries (which dont have a collection type property for some reason?)
 					// we dont want people to select libraries like playlist and collections since those are virtual libraries and not actual libraries
@@ -254,7 +254,7 @@ class MBClient {
 				async (err, res, body) => {
 					if (err) return reject(err);
 					if (res.statusCode !== 200)
-						return reject(`Status: ${res.statusCode} Response: ${body}`);
+						return reject(`Status: ${res.statusCode} Response: ${JSON.stringify(body)}`);
 
 					this.accessToken = body.AccessToken;
 					this.userId = body.User.Id;

@@ -29,7 +29,7 @@ const {
 const {
 	VIEW_SAVE,
 	CONFIG_SAVE,
-	THEME_CHANGE,
+	TYPE_CHANGE,
 	RECEIVE_VIEWS,
 	RECEIVE_TYPE,
 	RECEIVE_SERVERS,
@@ -600,7 +600,7 @@ ipcMain.on(CONFIG_SAVE, async (_, data) => {
 	startPresenceUpdater();
 });
 
-ipcMain.on(THEME_CHANGE, (_, data) => {
+ipcMain.on(TYPE_CHANGE, (_, data) => {
 	switch (data) {
 		case 'jellyfin':
 			db.write({ serverType: 'jellyfin' });
@@ -614,18 +614,26 @@ ipcMain.on(THEME_CHANGE, (_, data) => {
 ipcMain.on(RECEIVE_VIEWS, async (event) => {
 	let userViews;
 
+	if (!mbc.accessToken) {
+		// Not authed yet
+		logger.info("Attempting to authenticate")
+		try {
+			await mbc.login();
+		} catch (err) {
+			event.reply(FETCH_FAILED);
+			dialog.showErrorBox(name, 'Failed to fetch libraries for your user. Please try the reload button.');
+
+			logger.error('Failed to authenticate');
+			logger.error(err);
+		}
+	}
+
 	try {
 		userViews = await mbc.getUserViews();
 	} catch (err) {
 		event.reply(FETCH_FAILED);
 		dialog.showErrorBox(name, 'Failed to fetch libraries for your user. Please try the reload button.');
 		logger.error(err);
-
-		if (!mbc.accessToken) {
-			// Not authed yet
-			logger.info("Attempting to authenticate")
-			mbc.login();
-		}
 
 		return;
 	}

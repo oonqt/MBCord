@@ -5,7 +5,7 @@ const {
 	VALIDATION_ERROR,
 	RECEIVE_SERVERS,
 	RECEIVE_TYPE,
-	THEME_CHANGE
+	TYPE_CHANGE
 } = require(path.resolve(__dirname, '..', 'constants.js'));
 
 document.getElementById('configuration').addEventListener('submit', (e) => {
@@ -113,7 +113,7 @@ function setTheme(themeName) {
 				colors.embyTheme.solid
 			);
 			serverType.textContent = 'Switch to Jellyfin?';
-			ipcRenderer.send(THEME_CHANGE, 'emby');
+			ipcRenderer.send(TYPE_CHANGE, 'emby');
 			break;
 		case 'jellyfin':
 			document.documentElement.style.setProperty(
@@ -121,7 +121,7 @@ function setTheme(themeName) {
 				colors.jellyfinTheme.solid
 			);
 			serverType.textContent = 'Switch to Emby?';
-			ipcRenderer.send(THEME_CHANGE, 'jellyfin');
+			ipcRenderer.send(TYPE_CHANGE, 'jellyfin');
 			break;
 	}
 }
