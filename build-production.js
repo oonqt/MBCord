@@ -13,7 +13,7 @@ const zipSync = promisify(zip);
 
     for(const build of prodBuilds) {
         console.log(`Packaging ${build}`)
-        await execSync(`npm run ${build}`, { stdio: "ignore" });
+        execSync(`npm run ${build}`, { stdio: "ignore" });
     }
 
     console.log("\nCompressing... \n");
@@ -31,6 +31,6 @@ const zipSync = promisify(zip);
             out: `${buildPath}.zip`
         });
 
-        await rimraf.sync(buildPath);
+        rimraf.sync(buildPath);
     }
 })();
