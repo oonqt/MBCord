@@ -397,6 +397,7 @@ const setPresence = async () => {
 		const session = sessions.find(
 			(session) =>
 				session.NowPlayingItem !== undefined &&
+				session.UserName &&
 				session.UserName.toLowerCase() === data.username.toLowerCase()
 		);
 
