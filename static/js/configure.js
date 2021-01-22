@@ -1,12 +1,4 @@
 const { ipcRenderer } = require('electron');
-const path = require('path');
-const {
-	CONFIG_SAVE,
-	VALIDATION_ERROR,
-	RECEIVE_SERVERS,
-	RECEIVE_TYPE,
-	TYPE_CHANGE
-} = require(path.resolve(__dirname, '..', 'constants.js'));
 
 document.getElementById('configuration').addEventListener('submit', (e) => {
 	e.preventDefault();
@@ -44,7 +36,7 @@ ipcRenderer.on(VALIDATION_ERROR, (_, data) => {
 	});
 });
 
-ipcRenderer.on(RECEIVE_SERVERS, (_, data) => {
+ipcRenderer.on('RECEIVE_SERVERS', (_, data) => {
 	document.querySelector('.splashScreen').style.display = 'none';
 	document.querySelector('.content').style.display = 'block';
 
@@ -127,4 +119,4 @@ function setTheme(themeName) {
 }
 
 ipcRenderer.send(RECEIVE_TYPE);
-ipcRenderer.send(RECEIVE_SERVERS);
+ipcRenderer.send('RECEIVE_SERVERS');

@@ -1,11 +1,4 @@
 const { ipcRenderer } = require('electron');
-const path = require('path');
-const {
-	RECEIVE_VIEWS,
-	RECEIVE_TYPE,
-	FETCH_FAILED,
-	VIEW_SAVE
-} = require(path.resolve(__dirname, '..', 'constants.js'));
 
 ipcRenderer.on(FETCH_FAILED, () => {
 	document.querySelector('.progress').style.display = 'none';

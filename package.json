@@ -1,6 +1,6 @@
 {
   "name": "MBCord",
-  "version": "2.1.9",
+  "version": "3.0.0",
   "description": "An Emby/Jellyfin rich presence client for Discord",
   "main": "main.js",
   "scripts": {
@@ -32,7 +32,9 @@
   "dependencies": {
     "colors": "^1.4.0",
     "discord-rpc": "^3.0.2",
+    "electron-store": "^6.0.1",
     "json-stringify-safe": "^5.0.1",
+    "keytar": "^7.2.0",
     "material-icons": "^0.3.1",
     "materialize-css": "^1.0.0",
     "mkdirp": "^1.0.4",
