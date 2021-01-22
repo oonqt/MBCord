@@ -39,6 +39,7 @@
     "materialize-css": "^1.0.0",
     "mkdirp": "^1.0.4",
     "request": "^2.88.0",
+    "semver": "^7.3.4",
     "untildify": "^4.0.0"
   },
   "homepage": "https://github.com/oonqt/MBCord"

@@ -1,4 +1,5 @@
 const request = require('request');
+const semver = require('semver');
 
 class GithubClient {
 	/**
@@ -11,14 +12,6 @@ class GithubClient {
 		this.author = author;
 		this.repoName = repoName;
 		this.version = version;
-	}
-
-	/**
-	 *
-	 * @param {string} version Version as a string. (EX: 4.2.0)
-	 */
-	static extractVersionAsInt(version) {
-		return Number(version.split('.').join(''));
 	}
 
 	/**
@@ -53,11 +46,11 @@ class GithubClient {
 					return cb(`Status: ${res.statusCode} Body: ${body}`);
 
 				// prettier-ignore
-				const currentVersion = this.constructor.extractVersionAsInt(this.version);
-				// prettier-ignore
-				const latestVersion = this.constructor.extractVersionAsInt(body.tag_name);
+				// const currentVersion = this.constructor.extractVersionAsInt(this.version);
+				// // prettier-ignore
+				// const latestVersion = this.constructor.extractVersionAsInt(body.tag_name);
 
-				if (currentVersion < latestVersion) {
+				if (semver.lte(this.version, body.tag_name)) {
 					cb(null, {
 						pending: true,
 						version: body.tag_name
