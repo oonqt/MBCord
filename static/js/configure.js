@@ -12,7 +12,7 @@ document.getElementById('configuration').addEventListener('submit', (e) => {
 	let protocol = document.getElementById('protocol').value;
 	let port = document.getElementById('port').value;
 
-	ipcRenderer.send(CONFIG_SAVE, {
+	ipcRenderer.send('CONFIG_SAVE', {
 		serverAddress,
 		username,
 		password,
@@ -28,7 +28,7 @@ document.getElementById('serverType').addEventListener('click', function () {
 	setTheme(current === colors.embyTheme.solid ? 'jellyfin' : 'emby');
 });
 
-ipcRenderer.on(VALIDATION_ERROR, (_, data) => {
+ipcRenderer.on('VALIDATION_ERROR', (_, data) => {
 	data.forEach((fieldName) => {
 		const field = document.getElementById(fieldName);
 
@@ -91,7 +91,7 @@ ipcRenderer.on('RECEIVE_SERVERS', (_, data) => {
 	}
 });
 
-ipcRenderer.on(RECEIVE_TYPE, (_, data) => {
+ipcRenderer.on('RECEIVE_TYPE', (_, data) => {
 	setTheme(data);
 });
 
@@ -105,7 +105,7 @@ function setTheme(themeName) {
 				colors.embyTheme.solid
 			);
 			serverType.textContent = 'Switch to Jellyfin?';
-			ipcRenderer.send(TYPE_CHANGE, 'emby');
+			ipcRenderer.send('TYPE_CHANGE', 'emby');
 			break;
 		case 'jellyfin':
 			document.documentElement.style.setProperty(
@@ -113,10 +113,10 @@ function setTheme(themeName) {
 				colors.jellyfinTheme.solid
 			);
 			serverType.textContent = 'Switch to Emby?';
-			ipcRenderer.send(TYPE_CHANGE, 'jellyfin');
+			ipcRenderer.send('TYPE_CHANGE', 'jellyfin');
 			break;
 	}
 }
 
-ipcRenderer.send(RECEIVE_TYPE);
+ipcRenderer.send('RECEIVE_TYPE');
 ipcRenderer.send('RECEIVE_SERVERS');

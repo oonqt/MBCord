@@ -31,6 +31,10 @@ class MBClient {
         return url.toString();
 	}
 
+	get isAuthenticated() {
+		return this.accessToken !== undefined;
+	}
+
 	get headers() {
 		const headers = {};
 		
