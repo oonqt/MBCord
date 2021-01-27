@@ -28,7 +28,8 @@ class MBClient {
 	get serverAddress() {
 		const url = new URL(`${this.protocol}://${this.address}`);
 		url.port = this.port;
-        return url.toString();
+        const urlString = url.toString();
+		return urlString.slice(0, urlString.length - 1);
 	}
 
 	get headers() {
