@@ -44,16 +44,6 @@
 	padding-right: 0 !important;
 }
 
-#serverType {
-	position: absolute;
-	display: block;
-	margin-top: 5px;
-	padding-left: 10px;
-	cursor: pointer;
-	font-weight: 450;
-	color: var(--color);
-}
-
 .modal-content {
 	text-align: center;
 }

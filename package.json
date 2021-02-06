@@ -24,18 +24,19 @@
   "author": "oonqt",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^9.0.4",
+    "electron": "^9.4.1",
     "electron-installer-zip": "^0.1.2",
-    "electron-packager": "^14.0.5",
+    "electron-packager": "^15.2.0",
     "rimraf": "^3.0.2"
   },
   "dependencies": {
     "colors": "^1.4.0",
+    "deep-cleaner": "^1.2.1",
     "discord-rpc": "^3.0.2",
-    "electron-store": "^6.0.1",
+    "electron-store": "^7.0.0",
     "json-stringify-safe": "^5.0.1",
     "keytar": "^7.2.0",
-    "material-icons": "^0.3.1",
+    "material-icons": "^0.5.2",
     "materialize-css": "^1.0.0",
     "mkdirp": "^1.0.4",
     "request": "^2.88.0",

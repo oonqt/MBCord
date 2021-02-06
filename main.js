@@ -18,7 +18,7 @@ const DiscordRPC = require('discord-rpc');
 const UpdateChecker = require('./utils/UpdateChecker');
 const Logger = require('./utils/logger');
 const serverDiscoveryClient = require('./utils/ServerDiscoveryClient');
-const { scrubObject } = require('./utils/helpers');
+const { scrubObject, booleanToYN } = require('./utils/helpers');
 const { version, name, author, homepage } = require('./package.json');
 const {
 	clientIds,
@@ -28,8 +28,9 @@ const {
 	logRetentionCount,
 	discordConnectRetryMS,
 	MBConnectRetryMS,
-	presenceUpdateIntervalMS
-} = require('./config/default.json');
+	presenceUpdateIntervalMS,
+	maximumSessionInactivity
+} = require('./config.json');
 
 /**
  * @type {BrowserWindow}
@@ -55,31 +56,34 @@ let presenceUpdate;
 let updateChecker;
 
 (async () => {
-	let encryptionKey = await keytar.getPassword(name, 'data');
+	let encryptionKey = await keytar.getPassword(name, 'key');
 	if (!encryptionKey) {
 		encryptionKey = crypto.randomBytes(16).toString('hex');
-		await keytar.setPassword(name, 'data', encryptionKey);
+		await keytar.setPassword(name, 'key', encryptionKey);
 	}
 
 	const store = new Store({
 		encryptionKey,
 		name: 'settings',
-		defaults: {
-			enableDebugLogging: false,
-			isConfigured: false,
-			doDisplayStatus: true,
-			useTimeElapsed: false,
-			serverType: 'emby',
-			ignoredViews: [],
-			username: '',
-			password: '',
-			port: '',
-			serverAddress: '',
-			protocol: ''
+		schema: {
+			enableDebugLogging: {
+				type: 'boolean',
+				default: false
+			},
+			isConfigured: {
+				type: 'boolean',
+				default: false
+			},
+			doDisplayStatus: {
+				type: 'boolean',
+				default: true
+			},
+			servers: {
+				type: 'array',
+				default: []
+			}
 		}
 	});
-	const startupHandler = new StartupHandler(app, name);
-	const checker = new UpdateChecker(author, name, version);
 	const logger = new Logger(
 		process.defaultApp ? 'console' : 'file',
 		path.join(app.getPath('userData'), 'logs'),
@@ -87,6 +91,25 @@ let updateChecker;
 		name,
 		store.get('enableDebugLogging')
 	);
+	const startupHandler = new StartupHandler(app, name);
+	const checker = new UpdateChecker(author, name, version);
+
+	logger.info('Starting app...');
+	logger.info(`Platform: ${process.platform}`);
+	logger.info(`Architecture: ${process.arch}`);
+	logger.info(`MBCord version: ${version}`);
+	logger.info(`Node version: ${process.versions.node}`);
+	logger.info(`Electron version: ${process.versions.electron}`);
+
+	const getSelectedServer = () => {
+		const servers = store.get('servers');
+
+		return servers.length
+			? servers.find((server) => server.isSelected)
+				? servers.find((server) => server.isSelected)
+				: servers[0]
+			: null;
+	};
 
 	const startApp = () => {
 		mainWindow = new BrowserWindow({
@@ -98,7 +121,7 @@ let updateChecker;
 				nodeIntegration: true
 			},
 			resizable: false,
-			title: `Configure ${name}`,
+			title: name,
 			show: false
 		});
 
@@ -124,18 +147,6 @@ let updateChecker;
 
 		checkForUpdates();
 		updateChecker = setInterval(checkForUpdates, updateCheckInterval);
-	};
-
-	const loadConfigurationPage = () => {
-		// 	// if we dont set to resizable and we load lib configuration and then this window, it stays the same size as the lib configuration window (it doesnt do this for any other windows??)
-		mainWindow.resizable = true;
-
-		mainWindow.setSize(480, 310);
-		mainWindow.loadFile(path.join(__dirname, 'static', 'configure.html'));
-
-		if (!process.defaultApp) mainWindow.resizable = false;
-
-		appBarHide(false);
 	};
 
 	const resetApp = () => {
@@ -172,6 +183,18 @@ let updateChecker;
 		mainWindow.setSkipTaskbar(doHide);
 	};
 
+	const loadConfigurationPage = () => {
+		// 	// if we dont set to resizable and we load lib configuration and then this window, it stays the same size as the lib configuration window (it doesnt do this for any other windows??)
+		mainWindow.resizable = true;
+
+		mainWindow.setSize(600, 300);
+		mainWindow.loadFile(path.join(__dirname, 'static', 'configure.html'));
+
+		if (!process.defaultApp) mainWindow.resizable = false;
+
+		appBarHide(false);
+	};
+
 	const loadIgnoredLibrariesPage = () => {
 		mainWindow.loadFile(
 			path.join(__dirname, 'static', 'libraryConfiguration.html')
@@ -198,16 +221,80 @@ let updateChecker;
 			await mbc.logout();
 			mbc = null;
 		}
-		if (rpc) {
-			rpc.clearActivity();
-			rpc.destroy();
-			rpc = null;
-		}
+		disconnectRPC();
 		clearInterval(presenceUpdate);
 	};
 
-	const moveToTray = () => {
-		tray = new Tray(path.join(__dirname, 'icons', 'tray.png'));
+	const addServer = (server) => {
+		if (!tray) return logger.warn('Attempted to add server without tray');
+
+		const servers = store.get('servers');
+		servers.push(server);
+
+		store.set({
+			servers,
+			isSelected: false,
+			ignoredViews: [],
+		});
+
+		tray.setContextMenu(buildTrayMenu(servers));
+	};
+
+	const selectServer = async (server) => {
+		if (!tray) return logger.warn('Attempted to select server without tray');
+
+		const servers = store
+			.get('servers')
+			.map((savedServer) =>
+				savedServer.serverId === server.serverId
+					? { ...savedServer, isSelected: true }
+					: server
+			);
+
+		store.set({ servers });
+
+		tray.setContextMenu(buildTrayMenu(servers));
+
+		await stopPresenceUpdater();
+		startPresenceUpdater();
+	};
+
+	const removeServer = (serverToRemove) => {
+		if (!tray) return logger.warn('Attempted to remove server without tray');
+
+		const servers = store
+			.get('servers')
+			.filter((server) => server.serverId !== serverToRemove.serverId);
+
+		store.set({ servers });
+
+		tray.setContextMenu(buildTrayMenu(servers));
+	};
+
+	const buildTrayMenu = (servers) => {
+		const serverSelectionSubmenu = [];
+
+		for (const server of servers) {
+			serverSelectionSubmenu.push({
+				label: server.address,
+				click: () => selectServer(server),
+				submenu: [
+					{
+						type: 'normal',
+						label: `Selected Server: ${booleanToYN(server.isSelected)}`,
+						enabled: false
+					},
+					{
+						label: 'Remove Server',
+						click: () => removeServer(server)
+					},
+					{
+						label: 'Select Server',
+						click: () => selectServer(server)
+					}
+				]
+			});
+		}
 
 		const contextMenu = Menu.buildFromTemplate([
 			{
@@ -229,11 +316,22 @@ let updateChecker;
 				click: () => {
 					const isUsing = store.get('useTimeElapsed');
 
-					store.set({ useTimeElapsed: !isUsing });
+					store.set({ useTimeElapsed: !isUsing });
 				}
 			},
 			{
-				label: 'Set Ignored Libaries',
+				type: 'separator'
+			},
+			{
+				label: 'Add Server',
+				click: () => loadConfigurationPage(true)
+			},
+			{
+				label: 'Select Server',
+				submenu: serverSelectionSubmenu
+			},
+			{
+				label: 'Set Ignored Libraries',
 				click: () => loadIgnoredLibrariesPage()
 			},
 			{
@@ -286,6 +384,15 @@ let updateChecker;
 			}
 		]);
 
+		return contextMenu;
+	};
+
+	const moveToTray = () => {
+		tray = new Tray(path.join(__dirname, 'icons', 'tray.png'));
+
+		const servers = store.get('servers');
+		const contextMenu = buildTrayMenu(servers);
+
 		tray.setToolTip(name);
 		tray.setContextMenu(contextMenu);
 
@@ -333,13 +440,22 @@ let updateChecker;
 		});
 	};
 
+	const disconnectRPC = () => {
+		if (rpc) {
+			rpc.clearActivity();
+			rpc.destroy();
+			rpc = null;
+		}
+	};
+
 	const connectRPC = () => {
 		return new Promise((resolve) => {
-			const data = store.get();
+			const server = getSelectedServer();
+			if (!server) return logger.warn('No selected server');
 
 			rpc = new DiscordRPC.Client({ transport: 'ipc' });
 			rpc
-				.login({ clientId: clientIds[data.serverType] })
+				.login({ clientId: clientIds[server.serverType] })
 				.then(() => resolve())
 				.catch(() => {
 					logger.error(
@@ -352,8 +468,7 @@ let updateChecker;
 				});
 
 			rpc.transport.once('close', () => {
-				rpc.destroy();
-				rpc = null; // prevent cannot read property write of null errors
+				disconnectRPC();
 
 				logger.warn(
 					`Discord RPC connection closed. Attempting to reconnect in ${
@@ -371,36 +486,27 @@ let updateChecker;
 	};
 
 	const startPresenceUpdater = async () => {
-		const data = store.get();
+		const data = getSelectedServer();
+		if (!data) return logger.warn('No selected server');
 
-		if (!mbc) {
-			mbc = new MBClient(
-				{
-					address: data.serverAddress,
-					username: data.username,
-					password: data.password,
-					protocol: data.protocol,
-					port: data.port
-				},
-				{
-					deviceName: name,
-					deviceId: UUID,
-					deviceVersion: version,
-					iconUrl: iconUrl
-				}
-			);
-		}
+		mbc = new MBClient(data, {
+			deviceName: name,
+			deviceId: UUID,
+			deviceVersion: version,
+			iconUrl: iconUrl
+		});
 
 		logger.debug('Attempting to log into server');
-		logger.debug(scrubObject(data, 'username', 'password', 'serverAddress'));
+		logger.debug(scrubObject(data, 'username', 'password', 'address'));
 
-		await connectRPC();
+		connectRPC();
 
 		try {
 			await mbc.login();
 		} catch (err) {
 			logger.error('Failed to authenticate. Retrying in 30 seconds.');
 			logger.error(err);
+			dialog.showMessageBox();
 			setTimeout(startPresenceUpdater, MBConnectRetryMS);
 			return; // yeah no sorry buddy we don't want to continue if we didn't authenticate
 		}
@@ -411,12 +517,14 @@ let updateChecker;
 
 	const setPresence = async () => {
 		const data = store.get();
+		const server = getSelectedServer();
+		if (!server) return logger.warn('No selected server');
 
 		try {
 			let sessions;
 
 			try {
-				sessions = await mbc.getSessions();
+				sessions = await mbc.getSessions(maximumSessionInactivity);
 			} catch (err) {
 				return logger.error(`Failed to get sessions: ${err}`);
 			}
@@ -424,33 +532,44 @@ let updateChecker;
 			const session = sessions.find(
 				(session) =>
 					session.NowPlayingItem !== undefined &&
-					session.UserName.toLowerCase() === data.username.toLowerCase()
+					session.UserName &&
+					session.UserName.toLowerCase() === server.username.toLowerCase()
 			);
 
 			if (session) {
 				const NPItem = session.NowPlayingItem;
 
 				const NPItemLibraryID = await mbc.getItemInternalLibraryId(NPItem.Id);
-				if (store.get('ignoredViews').includes(NPItemLibraryID)) {
+				// convert
+				if (server.ignoredViews.includes(NPItemLibraryID)) {
 					// prettier-ignore
 					logger.debug(`${NPItem.Name} is in library with ID ${NPItemLibraryID} which is on the ignored library list, will not set status`);
 					if (rpc) rpc.clearActivity();
 					return;
 				}
 
-				logger.debug(session);
+				// remove client iP addresses (hopefully this takes care of all of them)
+				logger.debug(scrubObject(session, 'RemoteEndPoint'));
 
 				const currentEpochSeconds = new Date().getTime() / 1000;
-				const startTimestamp = Math.round(currentEpochSeconds - Math.round(session.PlayState.PositionTicks / 10000 / 1000));
+				const startTimestamp = Math.round(
+					currentEpochSeconds -
+						Math.round(session.PlayState.PositionTicks / 10000 / 1000)
+				);
 				const endTimestamp = Math.round(
 					currentEpochSeconds +
 						Math.round(
-							(session.NowPlayingItem.RunTimeTicks - session.PlayState.PositionTicks) / 10000 / 1000
+							(session.NowPlayingItem.RunTimeTicks -
+								session.PlayState.PositionTicks) /
+								10000 /
+								1000
 						)
 				);
 
 				logger.debug(
-					`Time until media end: ${endTimestamp - currentEpochSeconds}, been playing since: ${startTimestamp}`
+					`Time until media end: ${
+						endTimestamp - currentEpochSeconds
+					}, been playing since: ${startTimestamp}`
 				);
 
 				setTimeout(
@@ -469,13 +588,13 @@ let updateChecker;
 				};
 
 				if (!session.PlayState.IsPaused) {
-					data.useTimeElapsed ? defaultProperties.startTimestamp = startTimestamp : defaultProperties.endTimestamp = endTimestamp;
+					data.useTimeElapsed
+						? (defaultProperties.startTimestamp = startTimestamp)
+						: (defaultProperties.endTimestamp = endTimestamp);
 				}
 
-				logger.debug(defaultProperties);
-
 				switch (NPItem.Type) {
-					case 'Episode':
+					case 'Episode': {
 						// prettier-ignore
 						const seasonNum = NPItem.ParentIndexNumber
 						// prettier-ignore
@@ -493,7 +612,8 @@ let updateChecker;
 							...defaultProperties
 						});
 						break;
-					case 'Movie':
+					}
+					case 'Movie': {
 						rpc.setActivity({
 							details: 'Watching a Movie',
 							state: `${NPItem.Name} ${
@@ -502,9 +622,10 @@ let updateChecker;
 							...defaultProperties
 						});
 						break;
-					case 'MusicVideo':
+					}
+					case 'MusicVideo': {
 						// kill yourself i needed to redeclare it
-						var artists = NPItem.Artists.splice(0, 2); // we only want 2 artists
+						const artists = NPItem.Artists.splice(0, 2); // we only want 2 artists
 
 						rpc.setActivity({
 							details: `Watching ${NPItem.Name} ${
@@ -516,9 +637,10 @@ let updateChecker;
 							...defaultProperties
 						});
 						break;
-					case 'Audio':
-						var artists = NPItem.Artists.splice(0, 2);
-						var albumArtists = NPItem.AlbumArtists.map(
+					}
+					case 'Audio': {
+						const artists = NPItem.Artists.splice(0, 2);
+						const albumArtists = NPItem.AlbumArtists.map(
 							(ArtistInfo) => ArtistInfo.Name
 						).splice(0, 2);
 
@@ -536,6 +658,7 @@ let updateChecker;
 							...defaultProperties
 						});
 						break;
+					}
 					default:
 						rpc.setActivity({
 							details: 'Watching Other Content',
@@ -552,7 +675,7 @@ let updateChecker;
 		}
 	};
 
-	ipcMain.on('RECEIVE_SERVERS', async (event) => {
+	ipcMain.on('RECEIVE_INFO', async (event) => {
 		let jellyfinServers = [];
 		let embyServers = [];
 
@@ -572,6 +695,7 @@ let updateChecker;
 			logger.error(err);
 		}
 
+		// TODO: filter out servers that are already saved from showing in autodetect
 		const servers = [
 			// prettier-ignore
 			...embyServers,
@@ -580,11 +704,14 @@ let updateChecker;
 
 		logger.debug(`Server discovery result: ${JSON.stringify(servers)}`);
 
-		event.reply('RECEIVE_SERVERS', servers);
+		event.reply('RECEIVE_INFO', servers, getSelectedServer() ? false : true);
 	});
 
 	ipcMain.on('VIEW_SAVE', (_, data) => {
-		const ignoredViews = store.get('ignoredViews');
+		// CONVERT
+		const servers = store.get('servers');
+		const selectedServer = getSelectedServer();
+		const ignoredViews = selectedServer.ignoredViews;
 
 		if (ignoredViews.includes(data)) {
 			ignoredViews.splice(ignoredViews.indexOf(data), 1);
@@ -593,11 +720,14 @@ let updateChecker;
 		}
 
 		store.set({
-			ignoredViews
+			servers: servers.map((server) =>
+				server.isSelected ? { ...server, ignoredViews } : server
+			)
 		});
 	});
 
 	ipcMain.on('TYPE_CHANGE', (_, data) => {
+		// CONVERT
 		switch (data) {
 			case 'jellyfin':
 				store.set({ serverType: 'jellyfin' });
@@ -641,9 +771,10 @@ let updateChecker;
 			return;
 		}
 
+		// convert
 		const viewData = {
 			availableViews: userViews,
-			ignoredViews: store.get('ignoredViews')
+			ignoredViews: getSelectedServer().ignoredViews
 		};
 
 		logger.debug('Sending view data to renderer');
@@ -652,7 +783,9 @@ let updateChecker;
 		event.reply('RECEIVE_VIEWS', viewData);
 	});
 
-	ipcMain.on('CONFIG_SAVE', async (_, data) => {
+	ipcMain.on('ADD_SERVER', async (event, data, isFirstSetup) => {
+		logger.debug('Is first setup: ' + isFirstSetup);
+
 		const emptyFields = Object.entries(data)
 			.filter((entry) => !entry[1] && entry[0] !== 'password') // where entry[1] is the value, and if the field password is ignore it (emby and jelly dont require pws)
 			.map((field) => field[0]); // we map empty fields by their names
@@ -667,27 +800,19 @@ let updateChecker;
 			return;
 		}
 
-		mbc = new MBClient(
-			{
-				address: data.serverAddress,
-				username: data.username,
-				password: data.password,
-				protocol: data.protocol,
-				port: data.port
-			},
-			{
-				deviceName: name,
-				deviceId: UUID,
-				deviceVersion: version,
-				iconUrl: iconUrl
-			}
-		);
+		let client = new MBClient(data, {
+			deviceName: name,
+			deviceId: UUID,
+			deviceVersion: version,
+			iconUrl: iconUrl
+		});
 
 		logger.debug('Attempting to log into server');
-		logger.debug(scrubObject(data, 'username', 'password', 'serverAddress'));
+		logger.debug(scrubObject(data, 'username', 'password', 'address'));
 
+		let serverInfo;
 		try {
-			await mbc.login();
+			serverInfo = await client.login();
 		} catch (error) {
 			logger.error(error);
 			dialog.showMessageBox(mainWindow, {
@@ -695,17 +820,79 @@ let updateChecker;
 				title: name,
 				detail: 'Invalid server address or login credentials'
 			});
+			event.reply('RESET');
 			return;
 		}
 
-		store.set({ ...data, isConfigured: true, doDisplayStatus: true });
+		if (isFirstSetup) {
+			// convert
+			store.set({
+				servers: [
+					{
+						...data,
+						isSelected: true,
+						ignoredViews: [],
+						serverId: serverInfo.ServerId
+					}
+				],
+				isConfigured: true,
+				doDisplayStatus: true
+			});
+			moveToTray();
+			startPresenceUpdater();
+			mbc = client;
+		} else {
+			const configuredServers = store.get('servers');
 
-		moveToTray();
-		startPresenceUpdater();
+			if (
+				configuredServers.some(
+					(configuredServer) =>
+						configuredServer.serverId === serverInfo.ServerId
+				)
+			) {
+				dialog.showMessageBox(mainWindow, {
+					type: 'error',
+					title: name,
+					detail:
+						'You already configured this server, you can enable it from the tray.'
+				});
+
+				event.reply('RESET', true);
+			} else {
+				const newServer = {
+					...data,
+					isSelected: false,
+					ignoredViews: [],
+					serverId: serverInfo.ServerId
+				};
+
+				mainWindow.hide();
+
+				const res = await dialog.showMessageBox({
+					type: 'info',
+					title: name,
+					message:
+						'Your server has been successfully added. Would you like to select it automatically?',
+					buttons: ['Yes', 'No']
+				});
+
+				addServer(newServer);
+
+				if (res.response === 0) {
+					selectServer(newServer);
+				}
+
+				appBarHide(true);
+			}
+		}
 	});
 
 	ipcMain.on('RECEIVE_TYPE', (event) => {
-		event.reply('RECEIVE_TYPE', store.get('serverType'));
+		const selectedServer = getSelectedServer();
+		event.reply(
+			'RECEIVE_TYPE',
+			selectedServer ? selectedServer.serverType : 'emby'
+		);
 	});
 
 	if (app.isReady()) {

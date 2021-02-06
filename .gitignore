@@ -1,6 +1,4 @@
-package-lock.json
 node_modules/
 build/
 todos.txt
-things
 .DS_STORE

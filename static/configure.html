@@ -1,107 +1,116 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    
-    <link rel="stylesheet" href="../node_modules/materialize-css/dist/css/materialize.min.css">
-    <link rel="stylesheet" href="css/configure.css">
-</head>
-<body>
-    <div class="splashScreen">
-        <div class="container">
-            <div class="preloader-wrapper large active">
-                <div class="spinner-layer spinner-green-only">
-                <div class="circle-clipper left">
-                    <div class="circle"></div>
-                </div><div class="gap-patch">
-                    <div class="circle"></div>
-                </div><div class="circle-clipper right">
-                    <div class="circle"></div>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+        <link rel="stylesheet" href="../node_modules/materialize-css/dist/css/materialize.min.css">
+        <link rel="stylesheet" href="css/configure.css">
+    </head>
+    <body>
+        <div class="splashScreen">
+            <div class="container">
+                <div class="preloader-wrapper large active">
+                    <div class="spinner-layer spinner-green-only">
+                        <div class="circle-clipper left">
+                            <div class="circle"></div>
+                        </div>
+                        <div class="gap-patch">
+                            <div class="circle"></div>
+                        </div>
+                        <div class="circle-clipper right">
+                            <div class="circle"></div>
+                        </div>
+                    </div>
                 </div>
+
+                <h5>Attempting to autodetect servers...</h5>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="modal" id="serverDiscoveryModal">
+                <div class="modal-content">
+                    <h5 class="modal-title">We've auto-detected some servers</h5>
+                    <form id="modalForm">
+                        <div class="row">
+                            <select id="servers"></select>
+                        </div>
+                        <div class="button-row row">
+                            <div class="left-button col s6">
+                                <button class="btn waves-effect waves-light" type="submit">Select</button>
+                            </div>
+                            <div class="right-button col s6">
+                                <button class="btn waves-effect waves-light" id="notFound" type='button'>I don't see mine</button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
             </div>
 
-            <h5>Attempting to autodetect servers...</h5>
-        </div>
-    </div>
+            <div class="container">
+                <h5 class="title">Let's get you set up</h5>
 
-    <div class="content">
-        <div class="modal" id="serverDiscoveryModal">
-            <div class="modal-content">
-                <h5 class="modal-title">We've auto-detected some servers</h5>
-                <form id="modalForm">
+                <form id="configuration">
                     <div class="row">
-                        <select id="servers"></select>
-                    </div>
-                    <div class="button-row row">
-                        <div class="left-button col s6">
-                            <button class="btn waves-effect waves-light" type="submit">Select</button>
+                        <div class="input-field col s2">
+                            <select id="protocol">
+                                <option value="http" selected>http://</option>
+                                <option value="https">https://</option>
+                            </select>
+                            <label for="protocol">Protocol</label>
                         </div>
-                        <div class="right-button col s6">
-                            <button class="btn waves-effect waves-light" id="notFound" type='button'>I don't see mine</button>
+                        <div class="input-field col s6">
+                            <input id="serverAddress" type="text" value="localhost">
+                            <label for="serverAddress">Server Address</label>
+                        </div>
+                        <div class="input-field col s2">
+                            <input type="number" id="port" value="8096">
+                            <label for="port">Port</label>
+                        </div>
+                        <div class="input-field col s2">
+                            <select id="serverType">
+                                <option value="emby" selected>Emby</option>
+                                <option value="jellyfin">Jellyfin</option>
+                            </select>
+                            <label for="serverType">Type</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="input-field col s6">
+                            <input id="username" type="text">
+                            <label for="username">Username</label>
+                        </div>
+                        <div class="input-field col s6">
+                            <input id="password" type="password">
+                            <label for="password">Password</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col s12">
+                            <button class="btn waves-effect waves-light" id="submitButton" type="submit">
+                                Save
+                            </button>
                         </div>
                     </div>
                 </form>
             </div>
         </div>
-    
-        <div class="container">
-            <h5 class="title">Let's get you set up</h5>
-    
-            <form id="configuration">
-                <div class="row">
-                    <div class="input-field col s3">
-                        <select id="protocol">
-                            <option value="http" selected>http://</option>
-                            <option value="https">https://</option>
-                        </select>
-                        <label for="protocol">Protocol</label>
-                    </div>
-                    <div class="input-field col s6">
-                        <input id="serverAddress" type="text" value="localhost">
-                        <label for="serverAddress">Server Address</label>
-                    </div>
-                    <div class="input-field col s3">
-                        <input type="number" id="port" value="8096">
-                        <label for="port">Port</label>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="input-field col s6">
-                        <input id="username" type="text">
-                        <label for="username">Username</label>
-                    </div>
-                    <div class="input-field col s6">
-                        <input id="password" type="password">
-                        <label for="password">Password</label>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col s12">
-                        <button class="btn waves-effect waves-light" type="submit">Save</button>
-                    </div>
-                </div>
-            </form>
-    
-            <span id="serverType"></span>
-        </div>
-    </div>
 
-    <script src="../node_modules/materialize-css/dist/js/materialize.min.js"></script>
-    <script src="js/themeProvider.js"></script>
-    <script src="js/contextMenu.js"></script>
-    <script src="js/configure.js"></script>
+        <script src="../node_modules/materialize-css/dist/js/materialize.min.js"></script>
+        <script src="js/themeProvider.js"></script>
+        <script src="js/contextMenu.js"></script>
+        <script src="js/configure.js"></script>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const select = document.getElementById('protocol');
-            M.FormSelect.init(select);
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const select = document.querySelectorAll('select');
+                M.FormSelect.init(select);
 
-            const modals = document.querySelectorAll('.modal');
-            M.Modal.init(modals);
-        });
-    </script>
-</body>
+                const modals = document.querySelectorAll('.modal');
+                M.Modal.init(modals);
+            });
+        </script>
+    </body>
 </html>

@@ -1,3 +1,5 @@
+const clean = require('deep-cleaner');
+
 /**
  * 
  * @param {Object} object the object to scrum
@@ -8,7 +10,9 @@ exports.scrubObject = (object, ...keys) => {
 	
 	Object.assign(scrubbedObject, object);
 
-	keys.forEach((key) => delete scrubbedObject[key]);
+	clean(scrubbedObject, keys)
 
 	return scrubbedObject;
 }
+
+exports.booleanToYN = (bool) => bool ? 'Yes' : 'No';

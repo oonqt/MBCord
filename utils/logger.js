@@ -83,17 +83,11 @@ class Logger {
 	 * @param {string} level Level of the log
 	 * @returns {void}
 	 */
-	write(_message, level) {
+	write(messageContent, level) {
 		if (level === 'debug' && !this.enableDebugLogging) return;
 
-		let message;
-
-		if (typeof _message === 'object') {
-			message = stringify(_message, null, '  ');
-		} else {
-			message = _message;
-		}
-
+		const message = typeof messageContent === 'object' || Array.isArray(messageContent) ? messageContent.message ? messageContent.message : stringify(messageContent, null, ' ') : String(messageContent);
+ 
 		if (this.logType === 'console') {
 			switch (level) {
 				case 'info':
