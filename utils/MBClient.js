@@ -1,5 +1,7 @@
 const request = require('request');
 
+const SUCCESS_STATUS = [200, 201, 304];
+
 class MBClient {
 	/**
 	 * @param {Object} serverCredentials
@@ -53,7 +55,7 @@ class MBClient {
 				},
 				(err, res, body) => {
 					if (err) return reject(err);
-					if (res.statusCode !== 200)
+					if (!SUCCESS_STATUS.includes(res.statusCode))
 						return reject(`Status: ${res.statusCode} Response: ${JSON.stringify(body)}`);
 
 					resolve(body);
@@ -107,7 +109,7 @@ class MBClient {
 				},
 				async (err, res, body) => {
 					if (err) return reject(err);
-					if (res.statusCode !== 200)
+					if (!SUCCESS_STATUS.includes(res.statusCode))
 						return reject(`Status: ${res.statusCode} Response: ${JSON.stringify(body)}`);
 
 					// some libraries might have no items
@@ -136,7 +138,7 @@ class MBClient {
 				},
 				(err, res, body) => {
 					if (err) return reject(err);
-					if (res.statusCode !== 200)
+					if (!SUCCESS_STATUS.includes(res.statusCode))
 						return reject(`Status: ${res.statusCode} Response: ${JSON.stringify(body)}`);
 
 					resolve(body);
@@ -164,7 +166,7 @@ class MBClient {
 				},
 				(err, res, body) => {
 					if (err) return reject(err);
-					if (res.statusCode !== 200)
+					if (!SUCCESS_STATUS.includes(res.statusCode))
 						return reject(`Status: ${res.statusCode} Response: ${JSON.stringify(body)}`);
 
 					// second ancestor is always the library
@@ -189,7 +191,7 @@ class MBClient {
 				},
 				async (err, res, body) => {
 					if (err) return reject(err);
-					if (res.statusCode !== 200)
+					if (!SUCCESS_STATUS.includes(res.statusCode))
 						return reject(`Status: ${res.statusCode} Response: ${JSON.stringify(body)}`);
 
 					// undefined is for mixedcontent libraries (which dont have a collection type property for some reason?)
@@ -254,7 +256,7 @@ class MBClient {
 				},
 				async (err, res, body) => {
 					if (err) return reject(err);
-					if (res.statusCode !== 200)
+					if (!SUCCESS_STATUS.includes(res.statusCode))
 						return reject(`Status: ${res.statusCode} Response: ${JSON.stringify(body)}`);
 
 					this.accessToken = body.AccessToken;
