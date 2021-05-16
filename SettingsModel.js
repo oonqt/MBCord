@@ -3,6 +3,7 @@ const { v4 } = require('uuidv4');
 
 const SettingsModel = ({
 	doDisplayStatus,
+	useTimeElapsed,
 	clientUUID,
 	serverType,
 	ignoredViews,
@@ -12,9 +13,10 @@ const SettingsModel = ({
 	port,
 	protocol,
 	isConfigured,
-	logLevel
+	enableDebugLogging
 } = {}) => ({
 	doDisplayStatus: isEmpty(doDisplayStatus) ? true : doDisplayStatus,
+	useTimeElapsed: isEmpty(useTimeElapsed) ? false : useTimeElapsed,
 	clientUUID: isEmpty(clientUUID) ? clientUUID : v4(),
 	serverType: isEmpty(serverType) ? 'emby' : serverType,
 	ignoredViews: isEmpty(ignoredViews) ? [] : ignoredViews,
@@ -24,7 +26,7 @@ const SettingsModel = ({
 	port: isEmpty(port) ? '' : port,
 	protocol: isEmpty(protocol) ? '' : protocol,
 	isConfigured: isEmpty(isConfigured) ? false : isConfigured,
-	logLevel: isEmpty(logLevel) ? 'info' : logLevel
+	enableDebugLogging: enableDebugLogging(logLevel) ? false : enableDebugLogging
 });
 
 module.exports = SettingsModel;

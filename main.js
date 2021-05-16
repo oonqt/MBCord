@@ -17,7 +17,7 @@ const UpdateChecker = require('./utils/UpdateChecker');
 const Logger = require('./utils/logger');
 const serverDiscoveryClient = require('./utils/ServerDiscoveryClient');
 const SettingsModel = require('./SettingsModel');
-const { calcEndTimestamp, scrubObject } = require('./utils/utils');
+const { scrubObject } = require('./utils/utils');
 const { version, name, author, homepage } = require('./package.json');
 const {
 	clientIds,
@@ -47,7 +47,7 @@ const logger = new Logger(
 	path.join(app.getPath('userData'), 'logs'),
 	logRetentionCount,
 	name,
-	db.data().logLevel
+	db.data().enableDebugLogging
 );
 
 /**
@@ -104,6 +104,7 @@ const startApp = () => {
 	}
 
 	if (db.data().isConfigured) {
+		app.setAppUserModelId(db.data().clientUUID)
 		startPresenceUpdater();
 		moveToTray();
 	} else {
@@ -147,6 +148,13 @@ const toggleDisplay = () => {
 		db.write({ doDisplayStatus: true });
 	}
 };
+
+const toggleDebugLogging = () => db.write({ enableDebugLogging: !db.data().enableDebugLogging });
+
+const toggleTimeElapsed = () => {
+	db.write({ useTimeElapsed: !db.data().useTimeElapsed() });
+	logger.debug(`useTimeElapsed set to: ${db.data().useTimeElapsed}`);
+}
 
 const checkForUpdates = (calledFromTray) => {
 	checker.checkForUpdate((err, data) => {
@@ -213,6 +221,12 @@ const moveToTray = () => {
 			checked: db.data().doDisplayStatus
 		},
 		{
+			type: 'checkbox',
+			label: 'Use Time Elapsed',
+			click: () => toggleTimeElapsed(),
+			checked: db.data().useTimeElapsed
+		},
+		{
 			label: 'Set Ignored Libaries',
 			click: () => loadIgnoredLibrariesPage()
 		},
@@ -224,33 +238,10 @@ const moveToTray = () => {
 			click: () => checkForUpdates(true)
 		},
 		{
-			label: 'Log Level',
-			submenu: [
-				{
-					type: 'checkbox',
-					label: 'debug',
-					click: () => setLogLevel('debug'),
-					checked: logger.level === 'debug'
-				},
-				{
-					type: 'checkbox',
-					label: 'info',
-					click: () => setLogLevel('info'),
-					checked: logger.level === 'info'
-				},
-				{
-					type: 'checkbox',
-					label: 'warn',
-					click: () => setLogLevel('warn'),
-					checked: logger.level === 'warn'
-				},
-				{
-					type: 'checkbox',
-					label: 'error',
-					click: () => setLogLevel('error'),
-					checked: logger.level === 'error'
-				}
-			]
+			label: 'Enable Debug Logging',
+			type: 'checkbox',
+			click: () => toggleDebugLogging(),
+			checked: db.data().enableDebugLogging
 		},
 		{
 			label: 'Show Logs',
@@ -286,29 +277,11 @@ const moveToTray = () => {
 
 	tray.setToolTip(name);
 	tray.setContextMenu(contextMenu);
-	
+
 	new Notification({
 		title: `${name} ${version}`,
 		body: `${name} has been minimized to the tray`
 	}).show();
-	
-	const setLogLevel = (level) => {
-		db.write({ logLevel: level });
-		logger.level = level;
-
-		// we do this to prevent multiple items from being checked at once
-		const menuItems = contextMenu.items[5].submenu.items;
-
-		menuItems.forEach((item, index) => {
-			if(item.label === level) {
-				menuItems[index].checked = true;
-			} else {
-				menuItems[index].checked = false;
-			}
-		});
-
-		tray.setContextMenu(contextMenu);
-	};
 
 	appBarHide(true);
 };
@@ -366,7 +339,7 @@ const startPresenceUpdater = async () => {
 	}
 
 	logger.debug('Attempting to log into server');
-	logger.debug(scrubObject(data, 'username', 'password'));
+	logger.debug(scrubObject(data, 'username', 'password', 'address'));
 
 	await connectRPC();
 
@@ -413,12 +386,28 @@ const setPresence = async () => {
 				return;
 			}
 
-			logger.debug(session);
+			logger.debug(scrubObject(session, 'RemoteEndPoint')); // Hide client IPs
 
 			const currentEpochSeconds = new Date().getTime() / 1000;
-			const endTimestamp = calcEndTimestamp(session, currentEpochSeconds);
+			const startTimestamp = Math.round(
+				currentEpochSeconds -
+				Math.round(session.PlayState.PositionTicks / 10000 / 1000)
+			);
+			const endTimestamp = Math.round(
+				currentEpochSeconds +
+				Math.round(
+					(session.NowPlayingItem.RunTimeTicks -
+						session.PlayState.PositionTicks) /
+					10000 /
+					1000
+				)
+			);
 
-			logger.debug(`Time until media end: ${endTimestamp - currentEpochSeconds}`);
+			logger.debug(
+				`Time until media end: ${
+					endTimestamp - currentEpochSeconds
+				}, been playing since: ${startTimestamp}`
+			);
 
 			setTimeout(
 				setPresence,
@@ -427,14 +416,16 @@ const setPresence = async () => {
 
 			const defaultProperties = {
 				largeImageKey: 'large',
-				largeImageText: `${
-					NPItem.Type === 'Audio' ? 'Listening' : 'Watching'
-				} on ${session.Client}`,
+				largeImageText: `${NPItem.Type === 'Audio' ? 'Listening' : 'Watching'
+					} on ${session.Client}`,
 				smallImageKey: session.PlayState.IsPaused ? 'pause' : 'play',
 				smallImageText: session.PlayState.IsPaused ? 'Paused' : 'Playing',
-				instance: false,
-				endTimestamp: !session.PlayState.IsPaused && endTimestamp
+				instance: false
 			};
+
+			if (!session.PlayState.IsPaused) {
+				data.useTimeElapsed ? (defaultProperties.startTimestamp) = startTimestamp : (defaultProperties.endTimestamp = endTimestamp);
+			}
 
 			switch (NPItem.Type) {
 				case 'Episode':
@@ -445,9 +436,8 @@ const setPresence = async () => {
 
 					rpc.setActivity({
 						details: `Watching ${NPItem.SeriesName}`,
-						state: `${seasonNum ? `S${seasonNum.toString().padStart(2, '0')}` : ''}${
-							episodeNum ? `E${episodeNum.toString().padStart(2, '0')}: ` : ''
-						}${NPItem.Name}`,
+						state: `${seasonNum ? `S${seasonNum.toString().padStart(2, '0')}` : ''}${episodeNum ? `E${episodeNum.toString().padStart(2, '0')}: ` : ''
+							}${NPItem.Name}`,
 						...defaultProperties
 					});
 					break;
@@ -464,9 +454,8 @@ const setPresence = async () => {
 
 					rpc.setActivity({
 						details: `Watching ${NPItem.Name}`,
-						state: `By ${
-							artists.length ? artists.join(', ') : 'Unknown Artist'
-						}`,
+						state: `By ${artists.length ? artists.join(', ') : 'Unknown Artist'
+							}`,
 						...defaultProperties
 					});
 					break;
@@ -478,13 +467,12 @@ const setPresence = async () => {
 
 					rpc.setActivity({
 						details: `Listening to ${NPItem.Name}`,
-						state: `By ${
-							artists.length
+						state: `By ${artists.length
 								? artists.join(', ')
 								: albumArtists.length
 									? albumArtists.join(', ')
 									: 'Unknown Artist'
-						}`,
+							}`,
 						...defaultProperties
 					});
 					break;

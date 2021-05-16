@@ -19,7 +19,7 @@ class Logger {
 	 * @param {number} logRetentionCount Amount of logs to keep before removing old logs
 	 * @param {string} loggerName Name of the log file & entries
 	 */
-	constructor(logType, logPath, logRetentionCount, loggerName, logLevel) {
+	constructor(logType, logPath, logRetentionCount, loggerName, debugLoggingEnabled) {
 		this.logType = logType;
 		this.path = logPath;
 		this.logRetentionCount = logRetentionCount;
@@ -28,7 +28,7 @@ class Logger {
 		/**
 		 * @private
 		 */
-		this.logLevel = LOG_LEVEL_PRIORITIES[logLevel];
+		this.debug = debugLoggingEnabled;
 
 		this.file = path.join(
 			this.path,
@@ -91,43 +91,43 @@ class Logger {
 	 * @returns {void}
 	 */
 	write(_message, level) {
-		if(LOG_LEVEL_PRIORITIES[level] <= this.logLevel) {
-			let message;
+		if (level === 'debug' && !this.debug) return;
+		
+		let message;
 
-			if (typeof _message === 'object') {
-				message = stringify(_message, null, '  ');
+		if (typeof _message === 'object') {
+			message = stringify(_message, null, '  ');
+		} else {
+			message = _message;
+		}
+
+		if (this.logType === 'console') {
+			switch (level) {
+				case 'info':
+					console.log('Info: '.blue + message);
+					break;
+				case 'warn':
+					console.warn('Warn: '.yellow + message);
+					break;
+				case 'error':
+					console.error('Error: '.red + message);
+					break;
+				case 'debug':
+					console.debug('Debug: '.green + message);
+			}
+		} else if (this.logType === 'file') {
+			this.createDirIfDoesntExist();
+
+			if (!fs.existsSync(this.file)) {
+				fs.writeFileSync(this.file, this.constructor.formatMessage(message, level));
 			} else {
-				message = _message;
+				fs.appendFileSync(this.file, this.constructor.formatMessage(message, level));
 			}
 
-			if (this.logType === 'console') {
-				switch (level) {
-					case 'info':
-						console.log('Info: '.blue + message);
-						break;
-					case 'warn':
-						console.warn('Warn: '.yellow + message);
-						break;
-					case 'error':
-						console.error('Error: '.red + message);
-						break;
-					case 'debug':
-						console.debug('Debug: '.green + message);
-				}
-			} else if (this.logType === 'file') {
-				this.createDirIfDoesntExist();
+			let files = fs.readdirSync(this.path);
 
-				if (!fs.existsSync(this.file)) {
-					fs.writeFileSync(this.file, this.constructor.formatMessage(message, level));
-				} else {
-					fs.appendFileSync(this.file, this.constructor.formatMessage(message, level));
-				}
-
-				let files = fs.readdirSync(this.path);
-
-				if (files.length > this.logRetentionCount) {
-					fs.unlinkSync(path.join(this.path, files[0]));
-				}
+			if (files.length > this.logRetentionCount) {
+				fs.unlinkSync(path.join(this.path, files[0]));
 			}
 		}
 	}
