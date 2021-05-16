@@ -315,6 +315,7 @@ const stopPresenceUpdater = async () => {
 	}
 	if (rpc) rpc.clearActivity();
 	clearInterval(presenceUpdate);
+	presenceUpdate = null;
 };
 
 const startPresenceUpdater = async () => {
@@ -353,7 +354,7 @@ const startPresenceUpdater = async () => {
 	}
 
 	setPresence();
-	presenceUpdate = setInterval(setPresence, 15000);
+	if (!presenceUpdate) presenceUpdate = setInterval(setPresence, 15000);
 };
 
 const setPresence = async () => {
