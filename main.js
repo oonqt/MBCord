@@ -21,7 +21,6 @@ const { calcEndTimestamp, scrubObject } = require('./utils/utils');
 const { version, name, author, homepage } = require('./package.json');
 const {
 	clientIds,
-	UUID,
 	iconUrl,
 	updateCheckInterval,
 	logRetentionCount
@@ -92,6 +91,8 @@ const startApp = () => {
 	// only allow one instance
 	const isLocked = app.requestSingleInstanceLock();
 	if (!isLocked) return app.quit();
+
+	app.setAppUserModelId()
 
 	// is production?
 	if (process.defaultApp) {
@@ -357,7 +358,7 @@ const startPresenceUpdater = async () => {
 			},
 			{
 				deviceName: name,
-				deviceId: UUID,
+				deviceId: data.clientUUID,
 				deviceVersion: version,
 				iconUrl: iconUrl
 			}
@@ -574,7 +575,7 @@ ipcMain.on(CONFIG_SAVE, async (_, data) => {
 		},
 		{
 			deviceName: name,
-			deviceId: UUID,
+			deviceId: data.clientUUID,
 			deviceVersion: version,
 			iconUrl: iconUrl
 		}

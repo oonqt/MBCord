@@ -1,7 +1,9 @@
 const { isEmpty } = require('./utils/utils');
+const { v4 } = require('uuidv4');
 
 const SettingsModel = ({
 	doDisplayStatus,
+	clientUUID,
 	serverType,
 	ignoredViews,
 	serverAddress,
@@ -13,6 +15,7 @@ const SettingsModel = ({
 	logLevel
 } = {}) => ({
 	doDisplayStatus: isEmpty(doDisplayStatus) ? true : doDisplayStatus,
+	clientUUID: isEmpty(clientUUID) ? clientUUID : v4(),
 	serverType: isEmpty(serverType) ? 'emby' : serverType,
 	ignoredViews: isEmpty(ignoredViews) ? [] : ignoredViews,
 	serverAddress: isEmpty(serverAddress) ? '' : serverAddress,
