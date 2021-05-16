@@ -13,6 +13,7 @@ class JsonDB {
 	constructor(_dbfile, model) {
 		this.dbfile = _dbfile;
 		this.model = model;
+		this.cache = null;
 	}
 
 	/**
@@ -21,13 +22,18 @@ class JsonDB {
 	data() {
 		if (!fs.existsSync(this.dbfile)) {
 			return this.model();
+		} else if (this.cache) {
+			return this.cache;
 		} else {
-			return this.model(JSON.parse(fs.readFileSync(this.dbfile, 'utf8')));
+			const data = this.model(JSON.parse(fs.readFileSync(this.dbfile, 'utf8')));
+			this.cache = data;
+			return data;
 		}
 	}
 
 	reset() {
 		this.write(this.model());
+		this.cache = null;
 	}
 
 	/**
@@ -36,9 +42,13 @@ class JsonDB {
 	 * @returns {void}
 	 */
 	write(data) {
+		const data = this.model({ ...this.data(), ...data });
+
+		this.cache = data;
+
 		fs.writeFileSync(
 			this.dbfile,
-			JSON.stringify(this.model({ ...this.data(), ...data }))
+			JSON.stringify(data)
 		);
 	}
 }
