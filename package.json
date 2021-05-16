@@ -31,6 +31,7 @@
   },
   "dependencies": {
     "colors": "^1.4.0",
+    "deep-cleaner": "^1.2.1",
     "discord-rpc": "^3.0.2",
     "json-stringify-safe": "^5.0.1",
     "material-icons": "^0.3.1",
