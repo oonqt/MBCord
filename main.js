@@ -53,6 +53,7 @@ let mbc;
 let rpc;
 
 let presenceUpdate;
+let connectRPCTimeout;
 let updateChecker;
 
 (async () => {
@@ -230,8 +231,8 @@ let updateChecker;
 			await mbc.logout();
 			mbc = null;
 		}
-		disconnectRPC();
 		clearInterval(presenceUpdate);
+		presenceUpdate = null;
 	};
 
 	const addServer = (server) => {
@@ -254,18 +255,21 @@ let updateChecker;
 
 		const servers = store
 			.get('servers')
-			.map((savedServer) =>
-				savedServer.serverId === server.serverId
+			.map((savedServer) => {
+				logger.debug(savedServer);
+				logger.debug(server);
+
+				return savedServer.serverId === server.serverId
 					? { ...savedServer, isSelected: true }
 					: server
-			);
+			});
 
 		store.set({ servers });
 
 		tray.setContextMenu(buildTrayMenu(servers));
 
 		await stopPresenceUpdater();
-		startPresenceUpdater();
+		startPresenceUpdater(true);
 	};
 
 	const removeServer = (serverToRemove) => {
@@ -273,7 +277,7 @@ let updateChecker;
 
 		const servers = store
 			.get('servers')
-			.filter((server) => server.serverId !== serverToRemove.serverId);
+			.find((server) => server.serverId !== serverToRemove.serverId);
 
 		store.set({ servers });
 
@@ -452,6 +456,7 @@ let updateChecker;
 
 	const disconnectRPC = () => {
 		if (rpc) {
+			clearTimeout(connectRPCTimeout);
 			rpc.clearActivity();
 			rpc.destroy();
 			rpc = null;
@@ -474,7 +479,7 @@ let updateChecker;
 						} seconds`
 					);
 
-					setTimeout(connectRPC, discordConnectRetryMS);
+					connectRPCTimeout = setTimeout(connectRPC, discordConnectRetryMS);
 				});
 
 			rpc.transport.once('close', () => {
@@ -486,7 +491,7 @@ let updateChecker;
 					} seconds`
 				);
 
-				setTimeout(connectRPC, discordConnectRetryMS);
+				connectRPCTimeout = setTimeout(connectRPC, discordConnectRetryMS);
 			});
 
 			rpc.transport.once('open', () => {
@@ -495,7 +500,7 @@ let updateChecker;
 		});
 	};
 
-	const startPresenceUpdater = async () => {
+	const startPresenceUpdater = async (skipRPC) => {
 		const data = getSelectedServer();
 		if (!data) return logger.warn('No selected server');
 
@@ -509,7 +514,7 @@ let updateChecker;
 		logger.debug('Attempting to log into server');
 		logger.debug(scrubObject(data, 'username', 'password', 'address'));
 
-		connectRPC();
+		if(!skipRPC) connectRPC();
 
 		try {
 			await mbc.login();
@@ -522,7 +527,7 @@ let updateChecker;
 		}
 
 		setPresence();
-		presenceUpdate = setInterval(setPresence, presenceUpdateIntervalMS);
+		if(!presenceUpdate) presenceUpdate = setInterval(setPresence, presenceUpdateIntervalMS);
 	};
 
 	const setPresence = async () => {
