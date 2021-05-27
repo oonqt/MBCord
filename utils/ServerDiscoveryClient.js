@@ -23,7 +23,7 @@ exports.find = (timeoutMs, serverType) =>
 				7359,
 				'255.255.255.255',
 				(err) => {
-					if (err) rejects(err);
+					if (err) reject(err);
 				}
 			);
 		});

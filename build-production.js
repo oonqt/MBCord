@@ -6,14 +6,14 @@ const { promisify } = require("util");
 const { execSync } = require("child_process");
 const { prodBuilds } = require("./package.json");
 
-const zipSync = promisify(zip);
+const zipAsync = promisify(zip);
 
 (async () => {
     console.log("\nPackaging all platforms... \n");
 
     for(const build of prodBuilds) {
         console.log(`Packaging ${build}`)
-        execSync(`npm run ${build}`, { stdio: "ignore" });
+        execSync(`npm run build:${build}`, { stdio: "ignore" });
     }
 
     console.log("\nCompressing... \n");
@@ -26,7 +26,7 @@ const zipSync = promisify(zip);
         const buildPath = path.join("build", build);
 
         // problem code
-        await zipSync({
+        await zipAsync({
             dir: buildPath,
             out: `${buildPath}.zip`
         });

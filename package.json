@@ -15,11 +15,11 @@
     "build:arm64": "electron-packager . MBCord --out=build --overwrite --asar --icon=icons/win/icon.ico --platform=linux --arch=arm64"
   },
   "prodBuilds": [
-    "build:mac",
-    "build:win64",
-    "build:win32",
-    "build:linux64",
-    "build:linux32"
+    "mac",
+    "win64",
+    "win32",
+    "linux64",
+    "linux32"
   ],
   "author": "oonqt",
   "license": "MIT",
@@ -42,7 +42,8 @@
     "mkdirp": "^1.0.4",
     "request": "^2.88.2",
     "semver": "^7.3.5",
-    "untildify": "^4.0.0"
+    "untildify": "^4.0.0",
+    "uuid": "^8.3.2"
   },
   "homepage": "https://github.com/oonqt/MBCord"
 }

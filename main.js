@@ -10,6 +10,7 @@ const {
 } = require('electron');
 const crypto = require('crypto');
 const path = require('path');
+const { v4 } = require('uuid');
 const Store = require('electron-store');
 const keytar = require('keytar');
 const StartupHandler = require('./utils/startupHandler');
@@ -22,7 +23,6 @@ const { scrubObject, booleanToYN } = require('./utils/helpers');
 const { version, name, author, homepage } = require('./package.json');
 const {
 	clientIds,
-	UUID,
 	iconUrl,
 	updateCheckInterval,
 	logRetentionCount,
@@ -73,6 +73,10 @@ let updateChecker;
 			isConfigured: {
 				type: 'boolean',
 				default: false
+			},
+			UUID: {
+				type: 'string',
+				default: v4()
 			},
 			doDisplayStatus: {
 				type: 'boolean',
@@ -137,6 +141,8 @@ let updateChecker;
 		} else {
 			mainWindow.setMenu(null);
 		}
+
+		app.setAppUserModelId(name);
 
 		if (store.get('isConfigured')) {
 			startPresenceUpdater();
@@ -398,6 +404,7 @@ let updateChecker;
 
 		new Notification({
 			title: `${name} ${version}`,
+			icon: path.join(__dirname, 'icons', 'large.png'),
 			body: `${name} has been minimized to the tray`
 		}).show();
 
@@ -491,7 +498,7 @@ let updateChecker;
 
 		mbc = new MBClient(data, {
 			deviceName: name,
-			deviceId: UUID,
+			deviceId: store.get('UUID'),
 			deviceVersion: version,
 			iconUrl: iconUrl
 		});
@@ -802,7 +809,7 @@ let updateChecker;
 
 		let client = new MBClient(data, {
 			deviceName: name,
-			deviceId: UUID,
+			deviceId: store.get('UUID'),
 			deviceVersion: version,
 			iconUrl: iconUrl
 		});

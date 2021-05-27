@@ -1,14 +1,13 @@
 {
     "clientIds": {
-        "emby": "804581013937455156",
-        "jellyfin": "804581044065927208"
+        "emby": "843293609960275968",
+        "jellyfin": "843294504420769823"
     },
     "updateCheckInterval": 900000,
     "discordConnectRetryMS": 30000,
     "MBConnectRetryMS": 30000,
     "presenceUpdateIntervalMS": 15000,
     "maximumSessionInactivity": 300,
-    "UUID": "e695b395-e7e1-4740-8120-6bd549c8bb09",
     "iconUrl": "https://user-images.githubusercontent.com/36819562/73629369-c0b4a100-4607-11ea-84c8-ff6c73d5deba.png",
     "logRetentionCount": 10
 }
