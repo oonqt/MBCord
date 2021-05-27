@@ -102,7 +102,6 @@ const startApp = () => {
 	}
 
 	if (db.data().isConfigured) {
-		logger.info(db.data())
 		app.setAppUserModelId(name);
 		startPresenceUpdater();
 		moveToTray();
@@ -144,7 +143,10 @@ const toggleDisplay = () => {
 	logger.debug(`doDisplayStatus set to: ${doDisplay}`);
 };
 
-const toggleDebugLogging = () => db.write({ enableDebugLogging: !db.data().enableDebugLogging });
+const toggleDebugLogging = () => {
+	db.write({ enableDebugLogging: !db.data().enableDebugLogging });
+	logger.debugLogging = db.data().enableDebugLogging
+}
 
 const toggleTimeElapsed = () => {
 	db.write({ useTimeElapsed: !db.data().useTimeElapsed });
@@ -275,6 +277,7 @@ const moveToTray = () => {
 
 	new Notification({
 		title: `${name} ${version}`,
+		icon: path.join(__dirname, 'icons', 'large.png'),
 		body: `${name} has been minimized to the tray`
 	}).show();
 
