@@ -74,6 +74,10 @@ let updateChecker;
 				type: 'boolean',
 				default: false
 			},
+			useTimeElapsed: {
+				type: 'boolean',
+				default: false
+			},
 			UUID: {
 				type: 'string',
 				default: v4()
@@ -166,15 +170,12 @@ let updateChecker;
 	};
 
 	const toggleDisplay = () => {
-		if (store.get('doDisplayStatus')) {
-			logger.debug('doDisplayStatus disabled');
-			stopPresenceUpdater();
-			store.set('doDisplayStatus', false);
-		} else {
-			logger.debug('doDisplayStatus enabled');
-			startPresenceUpdater();
-			store.set('doDisplayStatus', true);
-		}
+		store.set('doDisplayStatus', !store.get('doDisplayStatus'));
+		
+		const doDisplay = store.get('doDisplayStatus');
+		logger.debug(`doDisplayStatus: ${doDisplay}`);
+
+		if (!doDisplay && rpc) rpc.clearActivity();
 	};
 
 	const appBarHide = (doHide) => {
