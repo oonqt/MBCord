@@ -21,12 +21,14 @@ class JsonDB {
 	 */
 	data() {
 		if (!fs.existsSync(this.dbfile)) {
-			return this.model();
+			const data = this.model();
+			this.rawWrite(data);
+			return data;
 		} else if (this.cache) {
 			return this.cache;
 		} else {
 			const data = this.model(JSON.parse(fs.readFileSync(this.dbfile, 'utf8')));
-			this.cache = data;
+			this.rawWrite(data); // we are writing in case the model was updated, that way changes are reflected. this also auto-caches
 			return data;
 		}
 	}
@@ -37,6 +39,18 @@ class JsonDB {
 	}
 
 	/**
+	 * @private
+	 */
+	rawWrite(data) {
+		this.cache = data;
+
+		fs.writeFileSync(
+			this.dbfile,
+			JSON.stringify(data)
+		);
+	}
+
+	/**
 	 *
 	 * @param {object} data Data to write to DB
 	 * @returns {void}
@@ -44,12 +58,7 @@ class JsonDB {
 	write(_data) {
 		const data = this.model({ ...this.data(), ..._data });
 
-		this.cache = data;
-
-		fs.writeFileSync(
-			this.dbfile,
-			JSON.stringify(data)
-		);
+		this.rawWrite(data);
 	}
 }
 
