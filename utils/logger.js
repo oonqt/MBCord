@@ -36,10 +36,6 @@ class Logger {
 		);
 	}
 
-	set level(level) {
-		this.logLevel = LOG_LEVEL_PRIORITIES[level];
-	}
-
 	get level() {
 		return Object.keys(LOG_LEVEL_PRIORITIES).find(key => LOG_LEVEL_PRIORITIES[key] === this.logLevel);
 	}
