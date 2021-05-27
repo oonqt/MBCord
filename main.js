@@ -103,8 +103,9 @@ const startApp = () => {
 		mainWindow.setMenu(null);
 	}
 
+	app.setAppUserModelId(name);
+	
 	if (db.data().isConfigured) {
-		app.setAppUserModelId(name);
 		startPresenceUpdater();
 		moveToTray();
 	} else {
