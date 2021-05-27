@@ -81,7 +81,9 @@ const startApp = () => {
 		minimizable: false,
 		maximizable: false,
 		webPreferences: {
-			nodeIntegration: true
+			nodeIntegration: true,
+			contextIsolation: false,
+			enableRemoteModule: true
 		},
 		resizable: false,
 		title: `Configure ${name}`,
