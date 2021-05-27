@@ -24,23 +24,24 @@
   "author": "oonqt",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^9.4.1",
+    "electron": "^13.0.1",
     "electron-installer-zip": "^0.1.2",
     "electron-packager": "^15.2.0",
-    "rimraf": "^3.0.2"
+    "rimraf": "^3.0.2",
+    "yarn-upgrade-all": "^0.5.4"
   },
   "dependencies": {
     "colors": "^1.4.0",
     "deep-cleaner": "^1.2.1",
-    "discord-rpc": "^3.0.2",
-    "electron-store": "^7.0.0",
+    "discord-rpc": "^3.2.0",
+    "electron-store": "^8.0.0",
     "json-stringify-safe": "^5.0.1",
-    "keytar": "^7.2.0",
-    "material-icons": "^0.5.2",
+    "keytar": "^7.7.0",
+    "material-icons": "^0.6.4",
     "materialize-css": "^1.0.0",
     "mkdirp": "^1.0.4",
-    "request": "^2.88.0",
-    "semver": "^7.3.4",
+    "request": "^2.88.2",
+    "semver": "^7.3.5",
     "untildify": "^4.0.0"
   },
   "homepage": "https://github.com/oonqt/MBCord"
