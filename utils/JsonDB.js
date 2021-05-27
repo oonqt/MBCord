@@ -41,8 +41,8 @@ class JsonDB {
 	 * @param {object} data Data to write to DB
 	 * @returns {void}
 	 */
-	write(data) {
-		const data = this.model({ ...this.data(), ...data });
+	write(_data) {
+		const data = this.model({ ...this.data(), ..._data });
 
 		this.cache = data;
 

@@ -92,8 +92,6 @@ const startApp = () => {
 	const isLocked = app.requestSingleInstanceLock();
 	if (!isLocked) return app.quit();
 
-	app.setAppUserModelId()
-
 	// is production?
 	if (process.defaultApp) {
 		mainWindow.resizable = true;
@@ -104,7 +102,8 @@ const startApp = () => {
 	}
 
 	if (db.data().isConfigured) {
-		app.setAppUserModelId(db.data().clientUUID)
+		logger.info(db.data())
+		app.setAppUserModelId(name);
 		startPresenceUpdater();
 		moveToTray();
 	} else {
@@ -138,21 +137,17 @@ const resetApp = () => {
 };
 
 const toggleDisplay = () => {
-	if (db.data().doDisplayStatus) {
-		logger.debug('doDisplayStatus disabled');
-		stopPresenceUpdater();
-		db.write({ doDisplayStatus: false });
-	} else {
-		logger.debug('doDisplayStatus enabled');
-		startPresenceUpdater();
-		db.write({ doDisplayStatus: true });
-	}
+	db.write({ doDisplayStatus: !db.data().doDisplayStatus });
+	
+	const doDisplay = db.data().doDisplayStatus;
+	if (!doDisplay && rpc) rpc.clearActivity();
+	logger.debug(`doDisplayStatus set to: ${doDisplay}`);
 };
 
 const toggleDebugLogging = () => db.write({ enableDebugLogging: !db.data().enableDebugLogging });
 
 const toggleTimeElapsed = () => {
-	db.write({ useTimeElapsed: !db.data().useTimeElapsed() });
+	db.write({ useTimeElapsed: !db.data().useTimeElapsed });
 	logger.debug(`useTimeElapsed set to: ${db.data().useTimeElapsed}`);
 }
 
@@ -338,7 +333,6 @@ const startPresenceUpdater = async () => {
 			}
 		);
 	}
-
 	logger.debug('Attempting to log into server');
 	logger.debug(scrubObject(data, 'username', 'password', 'address'));
 
@@ -358,9 +352,11 @@ const startPresenceUpdater = async () => {
 };
 
 const setPresence = async () => {
-	const data = db.data();
-
 	try {
+		const data = db.data();
+
+		if (!data.doDisplayStatus) return logger.debug('doDisplayStatus disabled, not setting status');
+
 		let sessions;
 
 		try {

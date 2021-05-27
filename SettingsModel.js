@@ -1,5 +1,5 @@
 const { isEmpty } = require('./utils/utils');
-const { v4 } = require('uuidv4');
+const { v4 } = require('uuid');
 
 const SettingsModel = ({
 	doDisplayStatus,
@@ -17,7 +17,7 @@ const SettingsModel = ({
 } = {}) => ({
 	doDisplayStatus: isEmpty(doDisplayStatus) ? true : doDisplayStatus,
 	useTimeElapsed: isEmpty(useTimeElapsed) ? false : useTimeElapsed,
-	clientUUID: isEmpty(clientUUID) ? clientUUID : v4(),
+	clientUUID: isEmpty(clientUUID) ? v4() : clientUUID,
 	serverType: isEmpty(serverType) ? 'emby' : serverType,
 	ignoredViews: isEmpty(ignoredViews) ? [] : ignoredViews,
 	serverAddress: isEmpty(serverAddress) ? '' : serverAddress,
@@ -26,7 +26,7 @@ const SettingsModel = ({
 	port: isEmpty(port) ? '' : port,
 	protocol: isEmpty(protocol) ? '' : protocol,
 	isConfigured: isEmpty(isConfigured) ? false : isConfigured,
-	enableDebugLogging: enableDebugLogging(logLevel) ? false : enableDebugLogging
+	enableDebugLogging: isEmpty(enableDebugLogging) ? false : enableDebugLogging
 });
 
 module.exports = SettingsModel;

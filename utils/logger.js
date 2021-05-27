@@ -28,7 +28,7 @@ class Logger {
 		/**
 		 * @private
 		 */
-		this.debug = debugLoggingEnabled;
+		this.debugLogging = debugLoggingEnabled;
 
 		this.file = path.join(
 			this.path,
@@ -91,7 +91,7 @@ class Logger {
 	 * @returns {void}
 	 */
 	write(_message, level) {
-		if (level === 'debug' && !this.debug) return;
+		if (level === 'debug' && !this.debugLogging) return;
 		
 		let message;
 
