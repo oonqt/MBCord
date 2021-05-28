@@ -111,15 +111,7 @@ let updateChecker;
 	logger.info(`Node version: ${process.versions.node}`);
 	logger.info(`Electron version: ${process.versions.electron}`);
 
-	const getSelectedServer = () => {
-		const servers = store.get('servers');
-
-		return servers.length
-			? servers.find((server) => server.isSelected)
-				? servers.find((server) => server.isSelected)
-				: servers[0]
-			: null;
-	};
+	const getSelectedServer = () => store.get('servers').find((server) => server.isSelected);
 
 	const startApp = () => {
 		mainWindow = new BrowserWindow({
@@ -258,10 +250,10 @@ let updateChecker;
 
 				return savedServer.serverId === server.serverId
 					? { ...savedServer, isSelected: true }
-					: server
+					: server;
 			});
 
-		store.set({ servers });
+		store.set('servers', servers);
 
 		tray.setContextMenu(buildTrayMenu(servers));
 
@@ -277,9 +269,9 @@ let updateChecker;
 			.get('servers')
 			.filter((server) => {
 				if (server.serverId !== serverToRemove.serverId) {
-					if (server.isSelected) wasSelected = true;
 					return true;
 				} else {
+					if (server.isSelected) wasSelected = true;
 					return false;
 				}
 			});
@@ -288,11 +280,10 @@ let updateChecker;
 
 		tray.setContextMenu(buildTrayMenu(servers));
 
-		dialog.showMessageBox(null, {
-			type: 'info',
+		dialog.showMessageBox({
 			title: name,
-			type: 'Success',
-			detail: `Successfully removed server from the server list. ${wasSelected && 'Since this was the currently selected server, your presence will no longer be displayed'}`
+			type: 'info',
+			detail: `Successfully removed server from the server list. ${wasSelected ? 'Since this was the currently selected server, your presence will no longer be displayed.' : ''}`
 		});
 	};
 
@@ -730,7 +721,7 @@ let updateChecker;
 
 		logger.debug(`Server discovery result: ${JSON.stringify(servers)}`);
 
-		event.reply('RECEIVE_INFO', servers, getSelectedServer() ? false : true);
+		event.reply('RECEIVE_INFO', servers);
 	});
 
 	ipcMain.on('VIEW_SAVE', (_, data) => {
@@ -809,8 +800,8 @@ let updateChecker;
 		event.reply('RECEIVE_VIEWS', viewData);
 	});
 
-	ipcMain.on('ADD_SERVER', async (event, data, isFirstSetup) => {
-		logger.debug('Is first setup: ' + isFirstSetup);
+	ipcMain.on('ADD_SERVER', async (event, data) => {
+		logger.debug('Is first setup: ' + !store.get('isConfigured'));
 
 		const emptyFields = Object.entries(data)
 			.filter((entry) => !entry[1] && entry[0] !== 'password') // where entry[1] is the value, and if the field password is ignore it (emby and jelly dont require pws)
@@ -850,7 +841,7 @@ let updateChecker;
 			return;
 		}
 
-		if (isFirstSetup) {
+		if (!store.get('isConfigured')) {
 			// convert
 			store.set({
 				servers: [
@@ -894,17 +885,21 @@ let updateChecker;
 
 				mainWindow.hide();
 
-				const res = await dialog.showMessageBox({
-					type: 'info',
-					title: name,
-					message:
-						'Your server has been successfully added. Would you like to select it automatically?',
-					buttons: ['Yes', 'No']
-				});
-
 				addServer(newServer);
 
-				if (res.response === 0) {
+				if (getSelectedServer()) {
+					const res = await dialog.showMessageBox({
+						type: 'info',
+						title: name,
+						message:
+							'Your server has been successfully added. Would you like to select it automatically?',
+						buttons: ['Yes', 'No']
+					});
+		
+					if (res.response === 0) {
+						selectServer(newServer);
+					}
+				} else {
 					selectServer(newServer);
 				}
 
