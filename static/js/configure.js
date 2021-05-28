@@ -2,8 +2,6 @@ const { ipcRenderer } = require('electron');
 
 const submitButton = document.getElementById('submitButton');
 
-let isFirstSetup = false;
-
 document.getElementById('configuration').addEventListener('submit', (e) => {
 	submitButton.disabled = true;
 
@@ -28,8 +26,7 @@ document.getElementById('configuration').addEventListener('submit', (e) => {
 			port,
 			protocol,
 			serverType
-		},
-		isFirstSetup
+		}
 	);
 });
 
@@ -61,9 +58,7 @@ ipcRenderer.on('VALIDATION_ERROR', (_, data) => {
 	});
 });
 
-ipcRenderer.on('RECEIVE_INFO', (_, data, firstSetup) => {
-	isFirstSetup = firstSetup;
-
+ipcRenderer.on('RECEIVE_INFO', (_, data) => {
 	document.querySelector('.splashScreen').style.display = 'none';
 	document.querySelector('.content').style.display = 'block';
 
@@ -121,10 +116,6 @@ ipcRenderer.on('RECEIVE_INFO', (_, data, firstSetup) => {
 	}
 });
 
-ipcRenderer.on('RECEIVE_TYPE', (_, data) => {
-	setTheme(data);
-});
-
 function setTheme(themeName) {
 	const serverType = document.getElementById('serverType');
 
@@ -146,5 +137,5 @@ function setTheme(themeName) {
 	}
 }
 
-ipcRenderer.send('RECEIVE_TYPE');
+setTheme('emby');
 ipcRenderer.send('RECEIVE_INFO');
