@@ -36,7 +36,7 @@ class GithubClient {
 			`https://api.github.com/repos/${this.author}/${this.repoName}/releases/latest`,
 			{
 				headers: {
-					'User-Agent': `${this.repoName}`
+					'User-Agent': `${this.repoName}/${this.version}`
 				},
 				json: true
 			},
