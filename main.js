@@ -245,12 +245,9 @@ let updateChecker;
 		const servers = store
 			.get('servers')
 			.map((savedServer) => {
-				logger.debug(savedServer);
-				logger.debug(server);
-
 				return savedServer.serverId === server.serverId
 					? { ...savedServer, isSelected: true }
-					: server;
+					: savedServer;
 			});
 
 		store.set('servers', servers);
