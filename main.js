@@ -31,6 +31,7 @@ const {
 	presenceUpdateIntervalMS,
 	maximumSessionInactivity
 } = require('./config.json');
+const { electron } = require('process');
 
 /**
  * @type {BrowserWindow}
@@ -271,13 +272,28 @@ let updateChecker;
 	const removeServer = (serverToRemove) => {
 		if (!tray) return logger.warn('Attempted to remove server without tray');
 
+		let wasSelected = false;
 		const servers = store
 			.get('servers')
-			.filter((server) => server.serverId !== serverToRemove.serverId);
+			.filter((server) => {
+				if (server.serverId !== serverToRemove.serverId) {
+					if (server.isSelected) wasSelected = true;
+					return true;
+				} else {
+					return false;
+				}
+			});
 
 		store.set('servers', servers);
 
 		tray.setContextMenu(buildTrayMenu(servers));
+
+		dialog.showMessageBox(null, {
+			type: 'info',
+			title: name,
+			type: 'Success',
+			detail: `Successfully removed server from the server list. ${wasSelected && 'Since this was the currently selected server, your presence will no longer be displayed'}`
+		});
 	};
 
 	const buildTrayMenu = (servers) => {
@@ -517,7 +533,6 @@ let updateChecker;
 		} catch (err) {
 			logger.error('Failed to authenticate. Retrying in 30 seconds.');
 			logger.error(err);
-			dialog.showMessageBox();
 			setTimeout(startPresenceUpdater, MBConnectRetryMS);
 			return; // yeah no sorry buddy we don't want to continue if we didn't authenticate
 		}
