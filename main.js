@@ -241,11 +241,7 @@ let updateChecker;
 		const servers = store.get('servers');
 		servers.push(server);
 
-		store.set({
-			servers,
-			isSelected: false,
-			ignoredViews: [],
-		});
+		store.set('servers', servers);
 
 		tray.setContextMenu(buildTrayMenu(servers));
 	};
@@ -277,9 +273,9 @@ let updateChecker;
 
 		const servers = store
 			.get('servers')
-			.find((server) => server.serverId !== serverToRemove.serverId);
+			.filter((server) => server.serverId !== serverToRemove.serverId);
 
-		store.set({ servers });
+		store.set('servers', servers);
 
 		tray.setContextMenu(buildTrayMenu(servers));
 	};
