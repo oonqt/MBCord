@@ -247,7 +247,7 @@ let updateChecker;
 			.map((savedServer) => {
 				return savedServer.serverId === server.serverId
 					? { ...savedServer, isSelected: true }
-					: savedServer;
+					: { ...savedServer, isSelected: false };
 			});
 
 		store.set('servers', servers);
