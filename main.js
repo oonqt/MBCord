@@ -16,9 +16,9 @@ const keytar = require('keytar');
 const StartupHandler = require('./utils/startupHandler');
 const MBClient = require('./utils/MBClient');
 const DiscordRPC = require('discord-rpc');
-const UpdateChecker = require('./utils/UpdateChecker');
+const UpdateChecker = require('./utils/updateChecker');
 const Logger = require('./utils/logger');
-const serverDiscoveryClient = require('./utils/ServerDiscoveryClient');
+const serverDiscoveryClient = require('./utils/serverDiscoveryClient');
 const { scrubObject, booleanToYN } = require('./utils/helpers');
 const { version, name, author, homepage } = require('./package.json');
 const {
@@ -31,7 +31,6 @@ const {
 	presenceUpdateIntervalMS,
 	maximumSessionInactivity
 } = require('./config.json');
-const { electron } = require('process');
 
 /**
  * @type {BrowserWindow}
