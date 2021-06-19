@@ -9,6 +9,11 @@ const {
 	Notification
 } = require('electron');
 const crypto = require('crypto');
+const fs = require('fs');
+const os = require('os');
+const unhandled = require('electron-unhandled');
+const contextMenu = require('electron-context-menu');
+const { is, chromeVersion, electronVersion, openNewGitHubIssue, debugInfo } = require('electron-util');
 const path = require('path');
 const { v4 } = require('uuid');
 const Store = require('electron-store');
@@ -57,10 +62,13 @@ let connectRPCTimeout;
 let updateChecker;
 
 (async () => {
-	let encryptionKey = await keytar.getPassword(name, 'key');
+	const oldConfigFile = path.join(app.getPath('userData'), 'config.json');
+	if (fs.existsSync(oldConfigFile)) fs.unlinkSync(oldConfigFile); // For security reasons we will delete the old config file as the new one will be encrypted, this one may contain sensitive information
+
+	let encryptionKey = await keytar.getPassword(name, 'dpkey');
 	if (!encryptionKey) {
-		encryptionKey = crypto.randomBytes(16).toString('hex');
-		await keytar.setPassword(name, 'key', encryptionKey);
+		encryptionKey = crypto.randomBytes(32).toString('hex');
+		await keytar.setPassword(name, 'dpkey', encryptionKey);
 	}
 
 	const store = new Store({
@@ -94,7 +102,7 @@ let updateChecker;
 		}
 	});
 	const logger = new Logger(
-		process.defaultApp ? 'console' : 'file',
+		is.development ? 'console' : 'file',
 		path.join(app.getPath('userData'), 'logs'),
 		logRetentionCount,
 		name,
@@ -104,13 +112,12 @@ let updateChecker;
 	const checker = new UpdateChecker(author, name, version);
 
 	logger.info('Starting app...');
-	logger.info(`Platform: ${process.platform}`);
+	logger.info(`Development Mode: ${is.development}`);
+	logger.info(`Platform: ${process.platform} (Version ${os.release()})`);
 	logger.info(`Architecture: ${process.arch}`);
 	logger.info(`MBCord version: ${version}`);
 	logger.info(`Node version: ${process.versions.node}`);
 	logger.info(`Electron version: ${process.versions.electron}`);
-
-	const getSelectedServer = () => store.get('servers').find((server) => server.isSelected);
 
 	const startApp = () => {
 		mainWindow = new BrowserWindow({
@@ -133,7 +140,7 @@ let updateChecker;
 		if (!lockedInstance) return app.quit();
 
 		// in development mode we allow resizing
-		if (process.defaultApp) {
+		if (is.development) {
 			mainWindow.resizable = true;
 			mainWindow.maximizable = true;
 			mainWindow.minimizable = true;
@@ -154,6 +161,18 @@ let updateChecker;
 		updateChecker = setInterval(checkForUpdates, updateCheckInterval);
 	};
 
+	const getSelectedServer = () => store.get('servers').find((server) => server.isSelected);
+
+	const getSelectedServer = () => {
+		const servers = store.get('servers');
+
+		return servers.length
+			? servers.find((server) => server.isSelected)
+				? servers.find((server) => server.isSelected)
+				: servers[0]
+			: null;
+	};
+
 	const resetApp = () => {
 		store.clear();
 
@@ -164,13 +183,13 @@ let updateChecker;
 		loadConfigurationPage();
 	};
 
-	const toggleDisplay = () => {
+	const toggleDisplay = async () => {
 		store.set('doDisplayStatus', !store.get('doDisplayStatus'));
 		
 		const doDisplay = store.get('doDisplayStatus');
 		logger.debug(`doDisplayStatus: ${doDisplay}`);
 
-		if (!doDisplay && rpc) rpc.clearActivity();
+		if (!doDisplay && rpc) await rpc.clearActivity();
 	};
 
 	const appBarHide = (doHide) => {
@@ -192,7 +211,7 @@ let updateChecker;
 		mainWindow.setSize(600, 300);
 		mainWindow.loadFile(path.join(__dirname, 'static', 'configure.html'));
 
-		if (!process.defaultApp) mainWindow.resizable = false;
+		if (!is.development) mainWindow.resizable = false;
 
 		appBarHide(false);
 	};
@@ -289,7 +308,6 @@ let updateChecker;
 		for (const server of servers) {
 			serverSelectionSubmenu.push({
 				label: server.address,
-				click: () => selectServer(server),
 				submenu: [
 					{
 						type: 'normal',
@@ -453,32 +471,32 @@ let updateChecker;
 		});
 	};
 
-	const disconnectRPC = () => {
+	const disconnectRPC = async () => {
 		if (rpc) {
 			clearTimeout(connectRPCTimeout);
-			rpc.clearActivity();
-			rpc.destroy();
+			await rpc.clearActivity();
+			await rpc.destroy();
 			rpc = null;
 		}
 	};
 
 	const connectRPC = () => {
 		return new Promise((resolve) => {
+			if (rpc) return logger.warn('Attempted to connect to RPC pipe while already connected');
+
 			const server = getSelectedServer();
 			if (!server) return logger.warn('No selected server');
 
 			rpc = new DiscordRPC.Client({ transport: 'ipc' });
 			rpc
 				.login({ clientId: clientIds[server.serverType] })
-				.then(() => resolve())
+				.then(resolve)
 				.catch(() => {
 					logger.error(
 						`Failed to connect to Discord. Attempting to reconnect in ${
 							discordConnectRetryMS / 1000
 						} seconds`
 					);
-
-					connectRPCTimeout = setTimeout(connectRPC, discordConnectRetryMS);
 				});
 
 			rpc.transport.once('close', () => {
@@ -513,7 +531,8 @@ let updateChecker;
 		logger.debug('Attempting to log into server');
 		logger.debug(scrubObject(data, 'username', 'password', 'address'));
 
-		if(!skipRPC) connectRPC();
+		await disconnectRPC();
+		await connectRPC();
 
 		try {
 			await mbc.login();
@@ -521,7 +540,7 @@ let updateChecker;
 			logger.error('Failed to authenticate. Retrying in 30 seconds.');
 			logger.error(err);
 			setTimeout(startPresenceUpdater, MBConnectRetryMS);
-			return; // yeah no sorry buddy we don't want to continue if we didn't authenticate
+			return;
 		}
 
 		setPresence();
@@ -557,7 +576,7 @@ let updateChecker;
 				if (server.ignoredViews.includes(NPItemLibraryID)) {
 					// prettier-ignore
 					logger.debug(`${NPItem.Name} is in library with ID ${NPItemLibraryID} which is on the ignored library list, will not set status`);
-					if (rpc) rpc.clearActivity();
+					if (rpc) await rpc.clearActivity();
 					return;
 				}
 
@@ -681,7 +700,7 @@ let updateChecker;
 				}
 			} else {
 				logger.debug('No session, clearing activity');
-				if (rpc) rpc.clearActivity();
+				if (rpc) await rpc.clearActivity();
 			}
 		} catch (error) {
 			logger.error(`Failed to set activity: ${error}`);
@@ -851,9 +870,9 @@ let updateChecker;
 				isConfigured: true,
 				doDisplayStatus: true
 			});
+
 			moveToTray();
 			startPresenceUpdater();
-			mbc = client;
 		} else {
 			const configuredServers = store.get('servers');
 
