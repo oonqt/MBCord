@@ -25,7 +25,7 @@ const DiscordRPC = require('discord-rpc');
 const UpdateChecker = require('./utils/updateChecker');
 const Logger = require('./utils/logger');
 const serverDiscoveryClient = require('./utils/serverDiscoveryClient');
-const { scrubObject, booleanToYN, stripIndent } = require('./utils/helpers');
+const { scrubObject, booleanToYN } = require('./utils/helpers');
 const { version, name, author, homepage } = require('./package.json');
 const {
 	clientIds,
@@ -188,7 +188,7 @@ let updateChecker;
 			startPresenceUpdater();
 			moveToTray();
 		} else {
-			loadConfigurationPage();
+			loadWindow('configure', { x: 600, y: 300 }, false);
 		}
 
 		checkForUpdates();
@@ -204,7 +204,7 @@ let updateChecker;
 
 		tray.destroy();
 
-		loadConfigurationPage();
+		loadWindow('configure', { x: 600, y: 300 }, false);
 	};
 
 	const toggleDisplay = async () => {
@@ -228,38 +228,21 @@ let updateChecker;
 		mainWindow.setSkipTaskbar(doHide);
 	};
 
-	const loadConfigurationPage = () => {
-		// 	// if we dont set to resizable and we load lib configuration and then this window, it stays the same size as the lib configuration window (it doesnt do this for any other windows??)
-		mainWindow.resizable = true;
+	const loadWindow = (pageName, size, preventAppQuitOnClose = true) => {
+		mainWindow.setSize(size.x, size.y);
+		mainWindow.loadFile(path.join(__dirname, 'static', `${pageName}.html`));
 
-		mainWindow.setSize(600, 300);
-		mainWindow.loadFile(path.join(__dirname, 'static', 'configure.html'));
-
-		if (!is.development) mainWindow.resizable = false;
-
-		appBarHide(false);
-	};
-
-	const loadIgnoredLibrariesPage = () => {
-		mainWindow.loadFile(
-			path.join(__dirname, 'static', 'libraryConfiguration.html')
-		);
-
-		mainWindow.setSize(450, 500);
-
-		mainWindow.addListener(
-			'close',
-			(closeNoExit = (e) => {
-				e.preventDefault();
-				mainWindow.hide();
+		if(preventAppQuitOnClose) {
+			mainWindow.addListener('close', (closeNoExit = (e) => {
+				e.preventDefault(); // prevent app close
+				mainWindow.hide(); // hide window
 				appBarHide(true);
-				mainWindow.removeListener('close', closeNoExit);
-			})
-		);
-		// for this window we ignore the event after it is closed
+				mainWindow.removeListener('close', closeNoExit); // remove listener
+			}));
+		}
 
 		appBarHide(false);
-	};
+	}
 
 	const stopPresenceUpdater = async () => {
 		if (mbc) {
@@ -380,7 +363,7 @@ let updateChecker;
 			},
 			{
 				label: 'Add Server',
-				click: () => loadConfigurationPage(true)
+				click: () => loadWindow('configure', { x: 600, y: 300 })
 			},
 			{
 				label: 'Select Server',
@@ -388,7 +371,11 @@ let updateChecker;
 			},
 			{
 				label: 'Set Ignored Libraries',
-				click: () => loadIgnoredLibrariesPage()
+				click: () => loadWindow('libraryConfiguration', { x: 450, y: 500 })
+			},
+			{
+				label: 'Advanced Configuration',
+				click: () => loadWindow('advancedConfiguration', { x: 800, y: 900 })
 			},
 			{
 				type: 'separator'
