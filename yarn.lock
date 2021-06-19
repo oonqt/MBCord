@@ -1700,10 +1700,10 @@ matcher@^3.0.0:
   dependencies:
     escape-string-regexp "^4.0.0"
 
-material-icons@^0.6.4:
-  version "0.6.4"
-  resolved "https://registry.yarnpkg.com/material-icons/-/material-icons-0.6.4.tgz#d0a120651c75058fe328c7ea9abb5b5be7e1b194"
-  integrity sha512-pAx0WSSGx4l6h8aMap+09TFMNMZUwGYlN0iWtK2vvHDJUe5B0MPmRyqwj42ov/x+kEqXuDKHT+2RUFfNZB3aUg==
+material-icons@^0.7.2:
+  version "0.7.2"
+  resolved "https://registry.yarnpkg.com/material-icons/-/material-icons-0.7.2.tgz#cfcb9b8247c624df4fca59661e914b81ad4deceb"
+  integrity sha512-IrMBh/aFr2YRDHmM/gUoGB9Kq0DzmEkn/qcKcc/B4lG1FGQzG1Zs+kQyR5b5EXjAVEnTsi0fs+s7iDsiX3Indg==
 
 materialize-css@^1.0.0:
   version "1.0.0"

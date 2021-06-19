@@ -41,7 +41,7 @@
     "electron-util": "^0.16.0",
     "json-stringify-safe": "^5.0.1",
     "keytar": "^7.7.0",
-    "material-icons": "^0.6.4",
+    "material-icons": "^0.7.2",
     "materialize-css": "^1.0.0",
     "mkdirp": "^1.0.4",
     "request": "^2.88.2",

@@ -99,6 +99,14 @@ let updateChecker;
 			servers: {
 				type: 'array',
 				default: []
+			},
+			jellyfinCustomClientId: {
+				type: 'string',
+				default: ''
+			},
+			embyCustomClientId: {
+				type: 'string',
+				default: ''
 			}
 		}
 	});
@@ -115,7 +123,6 @@ let updateChecker;
 	const debugInfo = () => {
 		return dedent`DEBUG INFO:
 			Development Mode: ${is.development}
-			Platform: ${process.platform} (Version ${os.release()})
 			Platform: ${process.platform} (Version ${os.release()})
 			Architecture: ${process.arch}
 			MBCord version: ${version}
@@ -277,9 +284,11 @@ let updateChecker;
 	const selectServer = async (server) => {
 		if (!tray) return logger.warn('Attempted to select server without tray');
 
-		const servers = store
-			.get('servers')
-			.map((savedServer) => {
+		const savedServers = store.get('servers');
+
+		if (server.serverId === savedServers.find(server => server.isSelected).serverId) return logger.debug('Tried to select server that\'s already selected');
+
+		const servers = savedServers.map((savedServer) => {
 				return savedServer.serverId === server.serverId
 					? { ...savedServer, isSelected: true }
 					: { ...savedServer, isSelected: false };
@@ -506,7 +515,7 @@ let updateChecker;
 
 			rpc = new DiscordRPC.Client({ transport: 'ipc' });
 			rpc
-				.login({ clientId: clientIds[server.serverType] })
+				.login({ clientId: store.get(`${server.serverType}CustomClientId`) || clientIds[server.serverType] })
 				.then(resolve)
 				.catch(() => {
 					logger.error(
@@ -597,7 +606,7 @@ let updateChecker;
 					return;
 				}
 
-				// remove client iP addresses (hopefully this takes care of all of them)
+				// remove client IP addresses (hopefully this takes care of all of them)
 				logger.debug(scrubObject(session, 'RemoteEndPoint'));
 
 				const currentEpochSeconds = new Date().getTime() / 1000;
@@ -666,15 +675,14 @@ let updateChecker;
 						rpc.setActivity({
 							details: 'Watching a Movie',
 							state: `${NPItem.Name} ${
-								NPItem.ProductionYear && `(${NPItem.ProductionYear})`
+								NPItem.ProductionYear ? `(${NPItem.ProductionYear})` : ''
 							}`,
 							...defaultProperties
 						});
 						break;
 					}
 					case 'MusicVideo': {
-						// kill yourself i needed to redeclare it
-						const artists = NPItem.Artists.splice(0, 2); // we only want 2 artists
+						const artists = NPItem.Artists.splice(0, 3); // we only want 3 artists
 
 						rpc.setActivity({
 							details: `Watching ${NPItem.Name} ${
@@ -688,10 +696,10 @@ let updateChecker;
 						break;
 					}
 					case 'Audio': {
-						const artists = NPItem.Artists.splice(0, 2);
+						const artists = NPItem.Artists.splice(0, 3);
 						const albumArtists = NPItem.AlbumArtists.map(
 							(ArtistInfo) => ArtistInfo.Name
-						).splice(0, 2);
+						).splice(0, 3);
 
 						rpc.setActivity({
 							details: `Listening to ${NPItem.Name} ${
@@ -836,7 +844,7 @@ let updateChecker;
 		logger.debug('Is first setup: ' + !store.get('isConfigured'));
 
 		const emptyFields = Object.entries(data)
-			.filter((entry) => !entry[1] && entry[0] !== 'password') // where entry[1] is the value, and if the field password is ignore it (emby and jelly dont require pws)
+			.filter((entry) => !entry[1] && entry[0] !== 'password') // where entry[1] is the value, and if the field password is ignore it (emby and jelly dont require you to have a pw, even though you should even on local network)
 			.map((field) => field[0]); // we map empty fields by their names
 
 		if (emptyFields.length) {
