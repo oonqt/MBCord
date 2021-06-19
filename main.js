@@ -9,11 +9,12 @@ const {
 	Notification
 } = require('electron');
 const crypto = require('crypto');
+const dedent = require('dedent-js');
 const fs = require('fs');
 const os = require('os');
 const unhandled = require('electron-unhandled');
 const contextMenu = require('electron-context-menu');
-const { is, chromeVersion, electronVersion, openNewGitHubIssue, debugInfo } = require('electron-util');
+const { is, chromeVersion, electronVersion, openNewGitHubIssue } = require('electron-util');
 const path = require('path');
 const { v4 } = require('uuid');
 const Store = require('electron-store');
@@ -24,7 +25,7 @@ const DiscordRPC = require('discord-rpc');
 const UpdateChecker = require('./utils/updateChecker');
 const Logger = require('./utils/logger');
 const serverDiscoveryClient = require('./utils/serverDiscoveryClient');
-const { scrubObject, booleanToYN } = require('./utils/helpers');
+const { scrubObject, booleanToYN, stripIndent } = require('./utils/helpers');
 const { version, name, author, homepage } = require('./package.json');
 const {
 	clientIds,
@@ -111,13 +112,39 @@ let updateChecker;
 	const startupHandler = new StartupHandler(app, name);
 	const checker = new UpdateChecker(author, name, version);
 
+	const debugInfo = () => {
+		return dedent`DEBUG INFO:
+			Development Mode: ${is.development}
+			Platform: ${process.platform} (Version ${os.release()})
+			Platform: ${process.platform} (Version ${os.release()})
+			Architecture: ${process.arch}
+			MBCord version: ${version}
+			Node version: ${process.versions.node}
+			Electron version: ${electronVersion}
+			Chrome version: ${chromeVersion}
+		`;
+	}
+
 	logger.info('Starting app...');
-	logger.info(`Development Mode: ${is.development}`);
-	logger.info(`Platform: ${process.platform} (Version ${os.release()})`);
-	logger.info(`Architecture: ${process.arch}`);
-	logger.info(`MBCord version: ${version}`);
-	logger.info(`Node version: ${process.versions.node}`);
-	logger.info(`Electron version: ${process.versions.electron}`);
+	logger.info(debugInfo());
+
+	contextMenu({
+		showLookUpSelection: false,
+		showSearchWithGoogle: false
+	});
+
+	unhandled({
+		logger: error => logger.error(error),
+		showDialog: true,
+		reportButton: error => {
+			openNewGitHubIssue({
+				user: author,
+				repo: name,
+				labels: ['bug'],
+				body: `\`\`\`\n${error.stack}\n\`\`\`\n\n---\n\n${debugInfo()}`
+			})
+		}
+	})
 
 	const startApp = () => {
 		mainWindow = new BrowserWindow({
@@ -162,16 +189,6 @@ let updateChecker;
 	};
 
 	const getSelectedServer = () => store.get('servers').find((server) => server.isSelected);
-
-	const getSelectedServer = () => {
-		const servers = store.get('servers');
-
-		return servers.length
-			? servers.find((server) => server.isSelected)
-				? servers.find((server) => server.isSelected)
-				: servers[0]
-			: null;
-	};
 
 	const resetApp = () => {
 		store.clear();
@@ -273,7 +290,7 @@ let updateChecker;
 		tray.setContextMenu(buildTrayMenu(servers));
 
 		await stopPresenceUpdater();
-		startPresenceUpdater(true);
+		startPresenceUpdater();
 	};
 
 	const removeServer = (serverToRemove) => {
@@ -517,7 +534,7 @@ let updateChecker;
 		});
 	};
 
-	const startPresenceUpdater = async (skipRPC) => {
+	const startPresenceUpdater = async () => {
 		const data = getSelectedServer();
 		if (!data) return logger.warn('No selected server');
 

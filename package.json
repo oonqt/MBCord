@@ -32,6 +32,7 @@
   },
   "dependencies": {
     "colors": "^1.4.0",
+    "dedent-js": "^1.0.1",
     "deep-cleaner": "^1.2.1",
     "discord-rpc": "^3.2.0",
     "electron-context-menu": "^3.1.1",
