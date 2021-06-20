@@ -151,7 +151,7 @@ let updateChecker;
 				body: `\`\`\`\n${error.stack}\n\`\`\`\n\n---\n\n${debugInfo()}`
 			})
 		}
-	})
+	});
 
 	const startApp = () => {
 		mainWindow = new BrowserWindow({
@@ -268,15 +268,30 @@ let updateChecker;
 		if (!tray) return logger.warn('Attempted to select server without tray');
 
 		const savedServers = store.get('servers');
+		const savedServer = savedServers.find(server => server.isSelected);
+		if (savedServer && (server.serverId === savedServer.serverId)) return logger.debug('Tried to select server that\'s already selected');
 
-		if (server.serverId === savedServers.find(server => server.isSelected).serverId) return logger.debug('Tried to select server that\'s already selected');
-
-		const servers = savedServers.map((savedServer) => {
-				return savedServer.serverId === server.serverId
-					? { ...savedServer, isSelected: true }
-					: { ...savedServer, isSelected: false };
+		let serverInfo;
+		try {
+			const client = new MBClient(server, {
+				deviceName: name,
+				deviceId: store.get('UUID'),
+				deviceVersion: version,
+				iconUrl: iconUrl
 			});
 
+			serverInfo = await client.getPublicSystemInfo();
+		} catch (err) {
+			logger.error('Failed to update server name');
+			logger.error(err);
+		}
+
+		const servers = savedServers.map((savedServer) => {
+			return savedServer.serverId === server.serverId
+				? { ...savedServer, isSelected: true, serverName: serverInfo ? serverInfo.ServerName : savedServer.serverName }
+				: { ...savedServer, isSelected: false };
+		});
+			
 		store.set('servers', servers);
 
 		tray.setContextMenu(buildTrayMenu(servers));
@@ -318,7 +333,7 @@ let updateChecker;
 
 		for (const server of servers) {
 			serverSelectionSubmenu.push({
-				label: server.address,
+				label: `${server.address} (${server.serverName})`,
 				submenu: [
 					{
 						type: 'normal',
@@ -854,7 +869,8 @@ let updateChecker;
 
 		let serverInfo;
 		try {
-			serverInfo = await client.login();
+			await client.login();
+			serverInfo = await client.getSystemInfo();
 		} catch (error) {
 			logger.error(error);
 			dialog.showMessageBox(mainWindow, {
@@ -874,7 +890,8 @@ let updateChecker;
 						...data,
 						isSelected: true,
 						ignoredViews: [],
-						serverId: serverInfo.ServerId
+						serverId: serverInfo.Id,
+						serverName: serverInfo.ServerName
 					}
 				],
 				isConfigured: true,
@@ -884,12 +901,14 @@ let updateChecker;
 			moveToTray();
 			startPresenceUpdater();
 		} else {
+			logger.debug(store.get('servers'));
+
 			const configuredServers = store.get('servers');
 
 			if (
 				configuredServers.some(
 					(configuredServer) =>
-						configuredServer.serverId === serverInfo.ServerId
+						configuredServer.serverId === serverInfo.Id
 				)
 			) {
 				dialog.showMessageBox(mainWindow, {
@@ -905,7 +924,8 @@ let updateChecker;
 					...data,
 					isSelected: false,
 					ignoredViews: [],
-					serverId: serverInfo.ServerId
+					serverId: serverInfo.Id,
+					serverName: serverInfo.ServerName
 				};
 
 				mainWindow.hide();
@@ -925,6 +945,15 @@ let updateChecker;
 						selectServer(newServer);
 					}
 				} else {
+					console.log('higiiuuiwehr uihwehuiwerhiouwefruhi');
+
+					await dialog.showMessageBox({
+						type: 'info',
+						title: name,
+						message:
+							'Your server has been successfully added and has been automatically selected.'
+					});
+
 					selectServer(newServer);
 				}
 

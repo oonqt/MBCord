@@ -45,6 +45,25 @@ class MBClient {
 		return headers;
 	}
 
+	getPublicSystemInfo() {
+		return new Promise((resolve, reject) => {
+			request(
+				`${this.serverAddress}/System/Info/Public`,
+				{
+					headers: this.headers,
+					json: true
+				},
+				(err, res, body) => {
+					if (err) return reject(err);
+					if (res.statusCode !== 200)
+						return reject(`Status: ${res.statusCode} Response: ${JSON.stringify(body)}`);
+
+					resolve(body);
+				}
+			);
+		});
+	}
+
 	static exchangeConnectToken(url, connectUserToken, connectUserId) {
 		return new Promise((resolve, reject) => {
 			request({
