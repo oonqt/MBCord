@@ -500,6 +500,7 @@ let updateChecker;
 	const disconnectRPC = async () => {
 		if (rpc) {
 			clearTimeout(connectRPCTimeout);
+			rpc.transport.removeAllListeners('close');
 			await rpc.clearActivity();
 			await rpc.destroy();
 			rpc = null;
