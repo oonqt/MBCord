@@ -56,3 +56,8 @@ li > span {
 .tabs .tab a {
     color: var(--color) !important;
 }
+
+[type="checkbox"].filled-in:checked+span:not(.lever):after {
+	border: 2px solid var(--color) !important;
+	background-color: var(--color) !important;
+}
