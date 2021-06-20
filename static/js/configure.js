@@ -37,6 +37,10 @@ document.getElementById('serverType').addEventListener('change', function () {
 	setTheme(current === colors.embyTheme.solid ? 'jellyfin' : 'emby');
 });
 
+ipcRenderer.on('CONNECT_ERROR', () => {
+	
+});
+
 ipcRenderer.on('RESET', (_, resetFields) => {
 	submitButton.disabled = false;
 

@@ -21,7 +21,7 @@ class ConnectAPI {
                 json: true
             }, (err, res, body) => {
                 if (err) return reject(err);
-                if (res.statusCode !== 200) return reject(`Status: ${res.statusCode} Response: ${JSON.stringify(body)}`);
+                if (res.statusCode !== 200) return reject({ status: res.statusCode, data: body });
 
                 resolve(body);
             });
@@ -39,7 +39,7 @@ class ConnectAPI {
                 json: true
             }, (err, res, body) => {
                 if (err) return reject(err);
-                if (res.statusCode !== 200) return reject(`Status: ${res.statusCode} Response: ${JSON.stringify(body)}`);
+                if (res.statusCode !== 200) return reject({ status: res.statusCode, data: body });
 
                 resolve(body);
             });

@@ -21,6 +21,7 @@ const Store = require('electron-store');
 const keytar = require('keytar');
 const StartupHandler = require('./utils/startupHandler');
 const MBClient = require('./utils/MBClient');
+const ConnectAPI = require('./utils/connectAPI');
 const DiscordRPC = require('discord-rpc');
 const UpdateChecker = require('./utils/updateChecker');
 const Logger = require('./utils/logger');
@@ -117,6 +118,7 @@ let updateChecker;
 		name,
 		store.get('enableDebugLogging')
 	);
+	const connectAPI = new ConnectAPI(name, version);
 	const startupHandler = new StartupHandler(app, name);
 	const checker = new UpdateChecker(author, name, version);
 
@@ -271,24 +273,9 @@ let updateChecker;
 		const savedServer = savedServers.find(server => server.isSelected);
 		if (savedServer && (server.serverId === savedServer.serverId)) return logger.debug('Tried to select server that\'s already selected');
 
-		let serverInfo;
-		try {
-			const client = new MBClient(server, {
-				deviceName: name,
-				deviceId: store.get('UUID'),
-				deviceVersion: version,
-				iconUrl: iconUrl
-			});
-
-			serverInfo = await client.getPublicSystemInfo();
-		} catch (err) {
-			logger.error('Failed to update server name');
-			logger.error(err);
-		}
-
 		const servers = savedServers.map((savedServer) => {
 			return savedServer.serverId === server.serverId
-				? { ...savedServer, isSelected: true, serverName: serverInfo ? serverInfo.ServerName : savedServer.serverName }
+				? { ...savedServer, isSelected: true }
 				: { ...savedServer, isSelected: false };
 		});
 			
@@ -841,6 +828,53 @@ let updateChecker;
 		event.reply('RECEIVE_VIEWS', viewData);
 	});
 
+	
+	ipcMain.on('RECEIVE_CONNECT_SERVERS', async (event, data) => {
+		logger.debug(`Receive connect servers data: ${JSON.stringify(data)}`);
+
+		let connectUser;
+		try {
+			connectUser = await connectAPI.getConnectUser(data.nameOrEmail, data.password);
+		} catch (err) {
+			logger.error(err);
+
+			let errorMessage;
+
+			if (err.status && err.status === 401) {
+				errorMessage = 'Failed to authenticate with connect, no user with that email/name exists';
+			} else if (err.status && err.status === 401) {
+				errorMessage = 'Failed to authenticate with connect, invalid password provided';
+			} else {
+				errorMessage = 'Failed to authenticate with connect, an unknown error occured.';
+			}
+
+			dialog.showMessageBox(mainWindow, {
+				type: 'error',
+				title: name,
+				detail: errorMessage
+			});
+
+			return event.reply('CONNECT_ERROR');
+		}
+
+		let connectServers;
+		try {
+		 	connectServers = await connectAPI.getConnectServers(connectUser.AccessToken, connectUser.User.Id);
+		} catch (err) {
+			logger.error(err);
+
+			dialog.showMessageBox(mainWindow, {
+				type: 'error',
+				title: name,
+				detail: 'An error occured and we failed to fetch the connect servers linked to your account, please try again later.'
+			});
+			
+			return event.reply('CONNECT_ERROR');
+		}
+
+		event.reply('RECEIVE_CONNECT_SERVERS', connectServers);
+	});
+
 	ipcMain.on('ADD_SERVER', async (event, data) => {
 		logger.debug('Is first setup: ' + !store.get('isConfigured'));
 
@@ -926,7 +960,8 @@ let updateChecker;
 					isSelected: false,
 					ignoredViews: [],
 					serverId: serverInfo.Id,
-					serverName: serverInfo.ServerName
+					serverName: serverInfo.ServerName,
+					auth
 				};
 
 				mainWindow.hide();
@@ -946,9 +981,7 @@ let updateChecker;
 						selectServer(newServer);
 					}
 				} else {
-					console.log('higiiuuiwehr uihwehuiwerhiouwefruhi');
-
-					await dialog.showMessageBox({
+					dialog.showMessageBox({
 						type: 'info',
 						title: name,
 						message:
