@@ -375,7 +375,7 @@ let updateChecker;
 			},
 			{
 				label: 'Advanced Configuration',
-				click: () => loadWindow('advancedConfiguration', { x: 800, y: 900 })
+				click: () => loadWindow('advancedConfiguration', { x: 450, y: 350 })
 			},
 			{
 				type: 'separator'
@@ -439,7 +439,7 @@ let updateChecker;
 		tray.setToolTip(name);
 		tray.setContextMenu(contextMenu);
 
-		new Notification({
+		if (!is.development) new Notification({
 			title: `${name} ${version}`,
 			icon: path.join(__dirname, 'icons', 'large.png'),
 			body: `${name} has been minimized to the tray`
@@ -941,6 +941,18 @@ let updateChecker;
 			'RECEIVE_TYPE',
 			selectedServer ? selectedServer.serverType : 'emby'
 		);
+	});
+
+	ipcMain.on('RECEIVE_CONFIG', event => {
+		event.reply('RECEIVE_CONFIG', store.get());
+	});
+
+	ipcMain.on('SAVE_ADVANCED_CONFIG', (event, data) => {
+		logger.debug(data);
+
+		store.set(data);
+
+		logger.info(store);
 	});
 
 	if (app.isReady()) {

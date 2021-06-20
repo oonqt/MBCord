@@ -1,0 +1,19 @@
+* {
+    user-select: none;
+}
+
+.container {
+    text-align: center;
+}
+
+.btn {
+	width: 100%;
+}
+
+.row {
+    margin: 0;
+}
+
+.col {
+    padding: 0 !important;
+}
