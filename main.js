@@ -376,10 +376,6 @@ let updateChecker;
 				click: () => loadWindow('libraryConfiguration', { x: 450, y: 500 })
 			},
 			{
-				label: 'Advanced Configuration',
-				click: () => loadWindow('advancedConfiguration', { x: 425, y: 500 })
-			},
-			{
 				type: 'separator'
 			},
 			{
@@ -943,18 +939,6 @@ let updateChecker;
 			'RECEIVE_TYPE',
 			selectedServer ? selectedServer.serverType : 'emby'
 		);
-	});
-
-	ipcMain.on('RECEIVE_CONFIG', event => {
-		event.reply('RECEIVE_CONFIG', store.get());
-	});
-
-	ipcMain.on('SAVE_ADVANCED_CONFIG', (event, data) => {
-		logger.debug(data);
-
-		store.set(data);
-
-		logger.info(store);
 	});
 
 	if (app.isReady()) {

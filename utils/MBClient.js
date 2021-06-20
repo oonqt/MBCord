@@ -45,22 +45,21 @@ class MBClient {
 		return headers;
 	}
 
-	static getPublicSystemInfo(serverAddress) {
+	static exchangeConnectToken(url, connectUserToken, connectUserId) {
 		return new Promise((resolve, reject) => {
-			request(
-				`${serverAddress}/System/Info/Public`,
-				{
-					headers: this.headers,
-					json: true
+			request({
+				url: url + `?format=json&ConnectUserId=${connectUserId}`,
+				headers: {
+					'x-emby-token': connectUserToken
 				},
-				(err, res, body) => {
-					if (err) return reject(err);
-					if (res.statusCode !== 200)
-						return reject(`Status: ${res.statusCode} Response: ${JSON.stringify(body)}`);
+				json: true
+			}, (err, res, body) => {
+				if (err) return reject(err);
+				if (res.statusCode !== 200)
+					return reject(`Status: ${res.statusCode} Response: ${JSON.stringify(body)}`);
 
-					resolve(body);
-				}
-			);
+				resolve(body);
+			});
 		});
 	}
 
