@@ -66,30 +66,4 @@ ipcRenderer.on('RECEIVE_VIEWS', (_, views) => {
 	});
 });
 
-ipcRenderer.on('RECEIVE_TYPE', (_, data) => {
-	switch (data) {
-		case 'emby':
-			document.documentElement.style.setProperty(
-				'--color',
-				colors.embyTheme.solid
-			);
-			document.documentElement.style.setProperty(
-				'--color-accent',
-				colors.embyTheme.accent
-			);
-			break;
-		case 'jellyfin':
-			document.documentElement.style.setProperty(
-				'--color',
-				colors.jellyfinTheme.solid
-			);
-			document.documentElement.style.setProperty(
-				'--color-accent',
-				colors.jellyfinTheme.accent
-			);
-			break;
-	}
-});
-
-ipcRenderer.send('RECEIVE_TYPE');
 ipcRenderer.send('RECEIVE_VIEWS');

@@ -1,0 +1,58 @@
+.switch label input[type='checkbox']:checked + .lever:after {
+	background-color: var(--color);
+}
+
+.switch label input[type='checkbox']:checked + .lever {
+	background-color: var(--color-accent);
+}
+
+.switch label .lever:before {
+	background-color: var(--color-accent);
+}
+
+.btn,
+.btn:hover,
+.btn:focus {
+  background-color: var(--color);
+}
+
+.progress .indeterminate {
+	background-color: var(--color) !important;
+}
+
+.progress {
+	background-color: var(--color-accent);
+}
+
+#reload > i {
+	color: var(--color);
+}
+
+.input-field input:focus + label {
+	color: var(--color) !important;
+}
+
+input:focus {
+	border-bottom: 1px solid var(--color) !important;
+	box-shadow: 0 1px 0 0 var(--color) !important;
+}
+
+li > span {
+	color: var(--color) !important;
+}
+
+.tabs .tab a:hover, .tabs .tab a.active {
+    color: var(--color) !important;
+}
+
+.tabs .indicator {
+    background-color: var(--color) !important;
+}
+
+.tabs .tab a:focus, .tabs .tab a:focus.active {
+    background-color: var(--color-accent) !important;
+}
+
+.tabs .tab a {
+    color: var(--color) !important;
+}

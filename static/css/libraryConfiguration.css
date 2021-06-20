@@ -36,36 +36,6 @@ span.viewName {
 	width: calc(60%);
 }
 
-.switch label input[type='checkbox']:checked + .lever:after {
-	background-color: var(--color);
-}
-
-.switch label input[type='checkbox']:checked + .lever {
-	background-color: var(--color-accent);
-}
-
-.switch label .lever:before {
-	background-color: var(--color-accent);
-}
-
-.btn,
-.btn:hover,
-.btn:focus {
-  background-color: var(--color);
-}
-
-.progress .indeterminate {
-	background-color: var(--color) !important;
-}
-
-.progress {
-	background-color: var(--color-accent);
-}
-
-#reload > i {
-	color: var(--color);
-}
-
 #reload:hover {
 	background-color: transparent !important;
 }

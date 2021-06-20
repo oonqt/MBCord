@@ -57,22 +57,3 @@
 	display: block;
 	margin-top: 5px;
 }
-
-.btn,
-.btn:hover,
-.btn:focus {
-	background-color: var(--color);
-}
-
-.input-field input:focus + label {
-	color: var(--color) !important;
-}
-
-input:focus {
-	border-bottom: 1px solid var(--color) !important;
-	box-shadow: 0 1px 0 0 var(--color) !important;
-}
-
-li > span {
-	color: var(--color) !important;
-}

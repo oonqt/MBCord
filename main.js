@@ -280,6 +280,8 @@ let updateChecker;
 		store.set('servers', servers);
 
 		tray.setContextMenu(buildTrayMenu(servers));
+		
+		mainWindow.webContents.send('RECEIVE_TYPE', server.serverType);
 
 		await stopPresenceUpdater();
 		startPresenceUpdater();
@@ -375,7 +377,7 @@ let updateChecker;
 			},
 			{
 				label: 'Advanced Configuration',
-				click: () => loadWindow('advancedConfiguration', { x: 450, y: 350 })
+				click: () => loadWindow('advancedConfiguration', { x: 425, y: 500 })
 			},
 			{
 				type: 'separator'

@@ -6,19 +6,59 @@
 
     <link rel="stylesheet" href="../node_modules/materialize-css/dist/css/materialize.min.css">
     <link rel="stylesheet" href="css/advancedConfiguration.css">
+    <link rel="stylesheet" href="css/theming.css">
 </head>
 <body>
     <div class="row">
         <div class="col s12">
             <ul class="tabs">
-                <li class="tab col s3"><a href="#test1">Test 1</a></li>
-                <li class="tab col s3"><a class="active" href="#test2">Test 2</a></li>
-                <li class="tab col s3 disabled"><a href="#test3">Disabled Tab</a></li>
-                <li class="tab col s3"><a href="#test4">Test 4</a></li>
+                <li class="tab col s3"><a href="#clientIds">Client IDs</a></li>
             </ul>
         </div>
     </div>
 
+    <div class="container">
+        <form id="clientIds">
+            <h5>Discord Client ID Customization</h5>
+            <h6>Please read <a href="https://github.com/oonqt/MBCord/wiki/Additional-Options#custom-client-ids">this</a> wiki page for more information</h6>
+        
+            <div class="row" style="margin-top: 20px">
+                <div class="switch">
+                    <label>
+                        <input 
+                        type="checkbox" 
+                        class="viewDisableToggle" 
+                        id="useCustomIDs"
+                        >
+                        <span class="lever"></span>
+                        <span>Enabled</span>
+                    </label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="input-field col s12">
+                    <input id="jellyfinCustomId" type="text">
+                    <label for="jellyfinCustomId">Jellyfin Client ID</label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="input-field col s12">
+                    <input id="embyCustomId" type="text">
+                    <label for="embyCustomId">Emby Client ID</label>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col s12">
+                    <button class="btn waves-effect waves-light" type="submit">
+                        Save
+                    </button>
+                </div>
+            </div>
+        </form>
+
+    </div>
+    
     <script src="../node_modules/materialize-css/dist/js/materialize.min.js"></script>
     <script src="js/themes.js"></script>
     <script src="js/advancedConfiguration.js"></script>
