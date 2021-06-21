@@ -12,9 +12,10 @@ class Logger {
 	 * @param {number} logRetentionCount Amount of logs to keep before removing old logs
 	 * @param {string} loggerName Name of the log file & entries
 	 */
-	constructor(logType, logPath, logRetentionCount, loggerName, maxLogFileSizeMB = 50, enableDebugLogging = false) {
+	constructor(logType, logPath, logRetentionCount, loggerName, maxLogFileSizeMB, enableDebugLogging = false) {
 		this.logType = logType;
 		this.path = logPath;
+		this.loggerName = loggerName;
 		this.logRetentionCount = logRetentionCount;
 		this.maxLogFileSizeMB = maxLogFileSizeMB;
 		this.timestamp = new Date();
@@ -24,7 +25,7 @@ class Logger {
 		 */
 		this.enableDebugLogging = enableDebugLogging;
 
-		this.file = getLogFilePath();
+		this.file = this.getLogFilePath();
 	}
 
 	/**
@@ -65,7 +66,7 @@ class Logger {
 	getLogFilePath() {
 		return path.join(
 			this.path,
-			`${loggerName}-${(this.timestamp.getTime() / 1000) | 0}.txt`
+			`${this.loggerName}-${(this.timestamp.getTime() / 1000) | 0}.txt`
 		);
 	}
 
@@ -108,7 +109,7 @@ class Logger {
 				const fileSize = fs.statSync(this.file).size / (1024 * 1024);
 
 				if (fileSize > this.maxLogFileSizeMB) {
-					this.file = getLogFilePath();
+					this.file = this.getLogFilePath();
 
 					fs.writeFileSync(this.file, this.constructor.formatMessage(message, level));
 				} else {

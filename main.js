@@ -21,7 +21,6 @@ const Store = require('electron-store');
 const keytar = require('keytar');
 const StartupHandler = require('./utils/startupHandler');
 const MBClient = require('./utils/MBClient');
-const ConnectAPI = require('./utils/connectAPI');
 const DiscordRPC = require('discord-rpc');
 const UpdateChecker = require('./utils/updateChecker');
 const Logger = require('./utils/logger');
@@ -36,7 +35,8 @@ const {
 	discordConnectRetryMS,
 	MBConnectRetryMS,
 	presenceUpdateIntervalMS,
-	maximumSessionInactivity
+	maximumSessionInactivity,
+	maxLogFileSizeMB
 } = require('./config.json');
 
 /**
@@ -100,14 +100,6 @@ let updateChecker;
 			servers: {
 				type: 'array',
 				default: []
-			},
-			jellyfinCustomClientId: {
-				type: 'string',
-				default: ''
-			},
-			embyCustomClientId: {
-				type: 'string',
-				default: ''
 			}
 		}
 	});
@@ -116,9 +108,9 @@ let updateChecker;
 		path.join(app.getPath('userData'), 'logs'),
 		logRetentionCount,
 		name,
+		maxLogFileSizeMB,
 		store.get('enableDebugLogging')
 	);
-	const connectAPI = new ConnectAPI(name, version);
 	const startupHandler = new StartupHandler(app, name);
 	const checker = new UpdateChecker(author, name, version);
 
@@ -213,8 +205,8 @@ let updateChecker;
 		store.set('doDisplayStatus', !store.get('doDisplayStatus'));
 		
 		const doDisplay = store.get('doDisplayStatus');
+		
 		logger.debug(`doDisplayStatus: ${doDisplay}`);
-
 		if (!doDisplay && rpc) await rpc.clearActivity();
 	};
 
@@ -486,6 +478,7 @@ let updateChecker;
 
 	const disconnectRPC = async () => {
 		if (rpc) {
+			logger.info('Disconnecting from Discord');
 			clearTimeout(connectRPCTimeout);
 			rpc.transport.removeAllListeners('close');
 			await rpc.clearActivity();
@@ -503,7 +496,7 @@ let updateChecker;
 
 			rpc = new DiscordRPC.Client({ transport: 'ipc' });
 			rpc
-				.login({ clientId: store.get(`${server.serverType}CustomClientId`) || clientIds[server.serverType] })
+				.login({ clientId: clientIds[server.serverType] })
 				.then(resolve)
 				.catch(() => {
 					logger.error(
@@ -526,7 +519,7 @@ let updateChecker;
 			});
 
 			rpc.transport.once('open', () => {
-				logger.info('Connected to Discord');
+				logger.info(`Connected to Discord (Server type: ${server.serverType})`);
 			});
 		});
 	};
@@ -562,6 +555,8 @@ let updateChecker;
 	};
 
 	const setPresence = async () => {
+		if (!store.get('doDisplayStatus')) return logger.debug('doDisplayStatus disabled, not setting status');
+
 		const data = store.get();
 		const server = getSelectedServer();
 		if (!server) return logger.warn('No selected server');
@@ -828,52 +823,53 @@ let updateChecker;
 		event.reply('RECEIVE_VIEWS', viewData);
 	});
 
-	
-	ipcMain.on('RECEIVE_CONNECT_SERVERS', async (event, data) => {
-		logger.debug(`Receive connect servers data: ${JSON.stringify(data)}`);
 
-		let connectUser;
-		try {
-			connectUser = await connectAPI.getConnectUser(data.nameOrEmail, data.password);
-		} catch (err) {
-			logger.error(err);
+	// FUTURE RELEASE, UNDECIDED..
+	// ipcMain.on('RECEIVE_CONNECT_SERVERS', async (event, data) => {
+	// 	logger.debug(`Receive connect servers data: ${JSON.stringify(data)}`);
 
-			let errorMessage;
+	// 	let connectUser;
+	// 	try {
+	// 		connectUser = await connectAPI.getConnectUser(data.nameOrEmail, data.password);
+	// 	} catch (err) {
+	// 		logger.error(err);
 
-			if (err.status && err.status === 401) {
-				errorMessage = 'Failed to authenticate with connect, no user with that email/name exists';
-			} else if (err.status && err.status === 401) {
-				errorMessage = 'Failed to authenticate with connect, invalid password provided';
-			} else {
-				errorMessage = 'Failed to authenticate with connect, an unknown error occured.';
-			}
+	// 		let errorMessage;
 
-			dialog.showMessageBox(mainWindow, {
-				type: 'error',
-				title: name,
-				detail: errorMessage
-			});
+	// 		if (err.status && err.status === 401) {
+	// 			errorMessage = 'Failed to authenticate with connect, no user with that email/name exists';
+	// 		} else if (err.status && err.status === 401) {
+	// 			errorMessage = 'Failed to authenticate with connect, invalid password provided';
+	// 		} else {
+	// 			errorMessage = 'Failed to authenticate with connect, an unknown error occured.';
+	// 		}
 
-			return event.reply('CONNECT_ERROR');
-		}
+	// 		dialog.showMessageBox(mainWindow, {
+	// 			type: 'error',
+	// 			title: name,
+	// 			detail: errorMessage
+	// 		});
 
-		let connectServers;
-		try {
-		 	connectServers = await connectAPI.getConnectServers(connectUser.AccessToken, connectUser.User.Id);
-		} catch (err) {
-			logger.error(err);
+	// 		return event.reply('CONNECT_ERROR');
+	// 	}
 
-			dialog.showMessageBox(mainWindow, {
-				type: 'error',
-				title: name,
-				detail: 'An error occured and we failed to fetch the connect servers linked to your account, please try again later.'
-			});
+	// 	let connectServers;
+	// 	try {
+	// 	 	connectServers = await connectAPI.getConnectServers(connectUser.AccessToken, connectUser.User.Id);
+	// 	} catch (err) {
+	// 		logger.error(err);
+
+	// 		dialog.showMessageBox(mainWindow, {
+	// 			type: 'error',
+	// 			title: name,
+	// 			detail: 'An error occured and we failed to fetch the connect servers linked to your account, please try again later.'
+	// 		});
 			
-			return event.reply('CONNECT_ERROR');
-		}
+	// 		return event.reply('CONNECT_ERROR');
+	// 	}
 
-		event.reply('RECEIVE_CONNECT_SERVERS', connectServers);
-	});
+	// 	event.reply('RECEIVE_CONNECT_SERVERS', connectServers);
+	// });
 
 	ipcMain.on('ADD_SERVER', async (event, data) => {
 		logger.debug('Is first setup: ' + !store.get('isConfigured'));
@@ -960,8 +956,7 @@ let updateChecker;
 					isSelected: false,
 					ignoredViews: [],
 					serverId: serverInfo.Id,
-					serverName: serverInfo.ServerName,
-					auth
+					serverName: serverInfo.ServerName
 				};
 
 				mainWindow.hide();

@@ -4,6 +4,7 @@
         "jellyfin": "843294504420769823"
     },
     "updateCheckInterval": 900000,
+    "maxLogFileSizeMB": 50,
     "discordConnectRetryMS": 30000,
     "MBConnectRetryMS": 30000,
     "presenceUpdateIntervalMS": 15000,
